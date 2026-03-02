@@ -1,0 +1,2461 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>따라큐 (Mimikyu) #778</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gamja+Flower&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/jpeg" href="pixel_mimikyu.png">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      overflow: hidden;
+      background-color: #FFF8E7;
+      cursor: none;
+      font-family: 'Gamja Flower', cursive;
+      transition: background-color 1.5s ease;
+      touch-action: none;
+    }
+
+    body.exposed {
+      background-color: #1A1325;
+    }
+
+    body.exposed #sound-btn,
+    body.exposed #lang-btn {
+      z-index: 0 !important;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease, z-index 0s;
+    }
+
+    canvas {
+      display: block;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    #bg-canvas {
+      z-index: 0;
+    }
+
+    #canvas {
+      z-index: 2;
+    }
+
+    /* Custom cursor */
+    #custom-cursor {
+      position: fixed;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background-color: rgba(155, 122, 199, 0.5);
+      border: 2px solid #9B7AC7;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      z-index: 10000;
+      transition: width 0.1s, height 0.1s;
+    }
+
+    /* Glitch animation */
+    @keyframes glitch {
+      0% {
+        transform: translate(0);
+      }
+
+      20% {
+        transform: translate(-5px, 5px);
+      }
+
+      40% {
+        transform: translate(-5px, -5px);
+      }
+
+      60% {
+        transform: translate(5px, 5px);
+      }
+
+      80% {
+        transform: translate(5px, -5px);
+      }
+
+      100% {
+        transform: translate(0);
+      }
+    }
+
+    .glitch {
+      animation: glitch 0.3s cubic-bezier(.25, .46, .45, .94) both;
+    }
+
+    /* Eye sparkle */
+    .eye-sparkle {
+      position: fixed;
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    @keyframes sparkle {
+      0% {
+        opacity: 0;
+        transform: scale(0) rotate(0deg);
+      }
+
+      50% {
+        opacity: 1;
+        transform: scale(1.5) rotate(180deg);
+      }
+
+      100% {
+        opacity: 0;
+        transform: scale(0) rotate(360deg);
+      }
+    }
+
+    /* ===== GLITCH TRANSITION EFFECTS ===== */
+
+    /* Dark overlay - sits BETWEEN bg-canvas and particle canvas */
+    #glitch-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      pointer-events: none;
+      opacity: 0;
+      background: #000000;
+      transition: opacity 0.15s ease;
+    }
+
+    /* Scanline layer - above particles */
+    #scanlines {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 6;
+      pointer-events: none;
+      opacity: 0;
+      background: repeating-linear-gradient(0deg,
+          transparent,
+          transparent 2px,
+          rgba(0, 0, 0, 0.15) 2px,
+          rgba(0, 0, 0, 0.15) 4px);
+      transition: opacity 0.3s ease;
+    }
+
+    /* Vignette effect */
+    #vignette {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 7;
+      pointer-events: none;
+      opacity: 0;
+      background: radial-gradient(ellipse at center,
+          transparent 30%,
+          rgba(10, 0, 20, 0.4) 70%,
+          rgba(10, 0, 20, 0.85) 100%);
+      transition: opacity 0.4s ease;
+    }
+
+    /* Static noise canvas */
+    #noise-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 8;
+      pointer-events: none;
+      opacity: 0;
+      mix-blend-mode: screen;
+    }
+
+    /* Brightness flash layer for dark-phase glitch */
+    #brightness-flash {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 3;
+      pointer-events: none;
+      opacity: 0;
+      background: #000;
+    }
+
+    /* Revealed text "따라큐" that appears in the dark */
+    #revealed-text {
+      position: fixed;
+      z-index: 4;
+      pointer-events: none;
+      opacity: 0;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: 'Gamja Flower', cursive;
+      font-weight: 700;
+      color: transparent;
+      -webkit-text-stroke: 1px rgba(155, 122, 199, 0);
+      text-shadow: none;
+      white-space: nowrap;
+      transition: opacity 0.8s ease, text-shadow 0.8s ease, color 0.8s ease, -webkit-text-stroke 0.8s ease;
+    }
+
+    #revealed-text.visible {
+      opacity: 1;
+      color: rgba(200, 170, 255, 0.9);
+      -webkit-text-stroke: 1px rgba(155, 122, 199, 0.5);
+      text-shadow:
+        0 0 20px rgba(155, 122, 199, 0.8),
+        0 0 40px rgba(155, 122, 199, 0.4),
+        0 0 80px rgba(100, 60, 180, 0.3),
+        0 0 120px rgba(80, 40, 150, 0.2);
+    }
+
+    /* RGB split on main canvas */
+    #canvas.glitch-rgb {
+      animation: rgbSplit 0.08s steps(3) infinite;
+    }
+
+    @keyframes rgbSplit {
+      0% {
+        filter: drop-shadow(-2px 0 #ff0044aa) drop-shadow(2px 0 #00f2ffaa);
+        transform: translate(0);
+      }
+
+      14% {
+        filter: drop-shadow(-6px 0 #ff0044cc) drop-shadow(6px 0 #00f2ffcc);
+        transform: translate(4px, -3px) skewX(-2deg);
+      }
+
+      28% {
+        filter: drop-shadow(5px 0 #ff0044bb) drop-shadow(-5px 0 #00f2ffbb);
+        transform: translate(-3px, 4px) skewX(1deg);
+      }
+
+      42% {
+        filter: drop-shadow(-8px 0 #ff0044ee) drop-shadow(8px 0 #00f2ffee);
+        transform: translate(2px, -5px) skewX(-3deg);
+      }
+
+      57% {
+        filter: drop-shadow(4px 2px #ff0044dd) drop-shadow(-4px -2px #00f2ffdd);
+        transform: translate(-5px, 2px) skewX(2deg);
+      }
+
+      71% {
+        filter: drop-shadow(-7px 0 #ff0044ff) drop-shadow(7px 0 #00f2ffff) brightness(1.3);
+        transform: translate(3px, -2px) skewX(-1deg);
+      }
+
+      85% {
+        filter: drop-shadow(3px 0 #ff004488) drop-shadow(-3px 0 #00f2ff88);
+        transform: translate(-2px, 3px);
+      }
+
+      100% {
+        filter: drop-shadow(-5px 0 #ff0044cc) drop-shadow(5px 0 #00f2ffcc);
+        transform: translate(1px, -1px) skewX(1deg);
+      }
+    }
+
+    /* Screen tear / horizontal displacement */
+    @keyframes screenTear {
+      0% {
+        clip-path: inset(0 0 95% 0);
+        transform: translateX(0);
+      }
+
+      5% {
+        clip-path: inset(15% 0 80% 0);
+        transform: translateX(-10px);
+      }
+
+      10% {
+        clip-path: inset(30% 0 60% 0);
+        transform: translateX(8px);
+      }
+
+      15% {
+        clip-path: inset(50% 0 40% 0);
+        transform: translateX(-15px);
+      }
+
+      20% {
+        clip-path: inset(70% 0 25% 0);
+        transform: translateX(5px);
+      }
+
+      25% {
+        clip-path: inset(80% 0 10% 0);
+        transform: translateX(-8px);
+      }
+
+      30% {
+        clip-path: inset(0);
+        transform: translateX(0);
+      }
+
+      100% {
+        clip-path: inset(0);
+        transform: translateX(0);
+      }
+    }
+
+    /* Flicker effect for the whole body */
+    @keyframes screenFlicker {
+      0% {
+        opacity: 1;
+        filter: none;
+      }
+
+      2% {
+        opacity: 0.1;
+        filter: invert(1);
+      }
+
+      4% {
+        opacity: 1;
+        filter: none;
+      }
+
+      6% {
+        opacity: 0.3;
+        filter: hue-rotate(180deg);
+      }
+
+      8% {
+        opacity: 1;
+        filter: none;
+      }
+
+      15% {
+        opacity: 0.6;
+        filter: saturate(3);
+      }
+
+      17% {
+        opacity: 1;
+        filter: none;
+      }
+
+      30% {
+        opacity: 1;
+        filter: none;
+      }
+
+      31% {
+        opacity: 0.05;
+        filter: invert(1) hue-rotate(90deg);
+      }
+
+      33% {
+        opacity: 1;
+        filter: none;
+      }
+
+      50% {
+        opacity: 1;
+        filter: none;
+      }
+
+      51% {
+        opacity: 0.2;
+        filter: none;
+      }
+
+      53% {
+        opacity: 0.8;
+        filter: hue-rotate(270deg);
+      }
+
+      55% {
+        opacity: 1;
+        filter: none;
+      }
+
+      70% {
+        opacity: 1;
+        filter: none;
+      }
+
+      71% {
+        opacity: 0.15;
+        filter: invert(1);
+      }
+
+      73% {
+        opacity: 1;
+        filter: none;
+      }
+
+      100% {
+        opacity: 1;
+        filter: none;
+      }
+    }
+
+    body.glitch-flicker {
+      animation: screenFlicker 0.4s steps(2) 3;
+    }
+
+    /* Glitch text fragments that fly across screen */
+    .glitch-fragment {
+      position: fixed;
+      z-index: 9;
+      pointer-events: none;
+      font-family: 'Gamja Flower', cursive;
+      color: rgba(155, 122, 199, 0.7);
+      text-shadow:
+        0 0 10px rgba(155, 122, 199, 0.5),
+        0 0 20px rgba(61, 43, 90, 0.3);
+      white-space: nowrap;
+      animation: fragmentFly 0.6s ease-out forwards;
+    }
+
+    @keyframes fragmentFly {
+      0% {
+        opacity: 1;
+        transform: translate(0, 0) scale(1) rotate(0deg);
+      }
+
+      60% {
+        opacity: 0.8;
+      }
+
+      100% {
+        opacity: 0;
+        transform: translate(var(--fly-x), var(--fly-y)) scale(0.3) rotate(var(--fly-rot));
+      }
+    }
+
+    /* Horizontal glitch bars */
+    .glitch-bar {
+      position: fixed;
+      left: 0;
+      width: 100%;
+      z-index: 9;
+      pointer-events: none;
+      background: linear-gradient(90deg,
+          transparent 0%,
+          rgba(155, 122, 199, 0.15) 20%,
+          rgba(255, 0, 68, 0.08) 40%,
+          rgba(0, 242, 255, 0.08) 60%,
+          rgba(155, 122, 199, 0.15) 80%,
+          transparent 100%);
+      animation: glitchBarSlide 0.3s ease-out forwards;
+    }
+
+    @keyframes glitchBarSlide {
+      0% {
+        opacity: 1;
+        transform: scaleX(0);
+      }
+
+      30% {
+        opacity: 0.8;
+        transform: scaleX(1);
+      }
+
+      100% {
+        opacity: 0;
+        transform: scaleX(1.2);
+      }
+    }
+
+    /* ===== DIAMOND STAR EYES & LIGHT BLOOM ===== */
+
+    /* Light bloom overlay for reassemble */
+    #light-bloom {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      pointer-events: none;
+      opacity: 0;
+      background: radial-gradient(ellipse at center,
+          rgba(255, 255, 240, 0.95) 0%,
+          rgba(255, 248, 220, 0.6) 25%,
+          rgba(255, 240, 200, 0.2) 50%,
+          transparent 70%);
+    }
+
+    /* Diamond star eye container */
+    .diamond-eye {
+      position: fixed;
+      z-index: 11;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+    }
+
+    /* Diamond star shape via SVG-like CSS */
+    .diamond-star {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    /* The 4-pointed diamond star */
+    .diamond-star::before,
+    .diamond-star::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    /* Glow behind the eyes */
+    .eye-glow {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      filter: blur(18px);
+      animation: eyeGlowPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes eyeGlowPulse {
+
+      0%,
+      100% {
+        opacity: 0.5;
+        transform: translate(-50%, -50%) scale(1);
+      }
+
+      50% {
+        opacity: 0.9;
+        transform: translate(-50%, -50%) scale(1.2);
+      }
+    }
+
+    /* Light rays from eyes */
+    .eye-ray {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform-origin: center;
+      background: linear-gradient(90deg,
+          rgba(255, 217, 61, 0.8) 0%,
+          rgba(255, 217, 61, 0) 100%);
+      border-radius: 50%;
+      filter: blur(2px);
+    }
+
+    @keyframes rayRotate {
+      0% {
+        transform: translate(-50%, -50%) rotate(var(--ray-angle)) scaleX(0);
+        opacity: 0;
+      }
+
+      30% {
+        transform: translate(-50%, -50%) rotate(var(--ray-angle)) scaleX(1);
+        opacity: 1;
+      }
+
+      100% {
+        transform: translate(-50%, -50%) rotate(var(--ray-angle)) scaleX(1.5);
+        opacity: 0;
+      }
+    }
+
+    /* Sparkle particles around eyes */
+    .eye-sparkle-particle {
+      position: fixed;
+      z-index: 12;
+      pointer-events: none;
+      border-radius: 50%;
+      animation: sparkleFloat var(--dur) ease-out forwards;
+    }
+
+    @keyframes sparkleFloat {
+      0% {
+        opacity: 1;
+        transform: translate(0, 0) scale(1);
+      }
+
+      100% {
+        opacity: 0;
+        transform: translate(var(--sx), var(--sy)) scale(0);
+      }
+    }
+
+
+    /* ===== MOBILE TOUCH SUPPORT ===== */
+    @media (hover: none) and (pointer: coarse) {
+      body {
+        cursor: default;
+      }
+
+      #custom-cursor {
+        display: none !important;
+      }
+    }
+
+    #mobile-hint {
+      position: fixed;
+      bottom: 18%;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Gamja Flower', cursive;
+      font-weight: 700;
+      font-size: 20px;
+      color: rgba(155, 122, 199, 0.7);
+      z-index: 100;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.8s ease;
+      white-space: nowrap;
+    }
+
+    #mobile-hint.visible {
+      animation: hintFloat 3s ease-in-out infinite;
+    }
+
+    @keyframes hintFloat {
+
+      0%,
+      100% {
+        transform: translateX(-50%) translateY(0);
+        opacity: 0.5;
+      }
+
+      50% {
+        transform: translateX(-50%) translateY(-6px);
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="bg-canvas"></canvas>
+  <div id="glitch-overlay"></div>
+  <canvas id="canvas"></canvas>
+  <div id="brightness-flash"></div>
+  <div id="revealed-text"></div>
+  <div id="scanlines"></div>
+  <div id="vignette"></div>
+  <canvas id="noise-canvas"></canvas>
+  <div id="light-bloom"></div>
+  <div id="custom-cursor"></div>
+  <div id="mobile-hint">눌러서 정체를 확인해 보세요</div>
+
+  <!-- Sound toggle button -->
+  <button id="sound-btn" aria-label="Toggle sound" style="
+    position: fixed; top: 20px; right: 20px;
+    z-index: 99999; cursor: pointer;
+    width: 48px; height: 48px;
+    border: 2px solid rgba(155, 122, 199, 0.4);
+    border-radius: 50%;
+    background: rgba(255, 248, 231, 0.85);
+    backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.3s, border-color 0.3s, transform 0.15s;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 0;
+  ">
+    <!-- Muted icon (default) -->
+    <svg id="icon-muted" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9B7AC7" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+      <line x1="23" y1="9" x2="17" y2="15" />
+      <line x1="17" y1="9" x2="23" y2="15" />
+    </svg>
+    <!-- Unmuted icon (shown after click) -->
+    <svg id="icon-unmuted" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9B7AC7" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+    </svg>
+  </button>
+
+  <!-- Language toggle button -->
+  <button id="lang-btn" aria-label="Switch language" style="
+    position: fixed; top: 20px; right: 78px;
+    z-index: 99999; cursor: pointer;
+    width: 48px; height: 48px;
+    border: 2px solid rgba(155, 122, 199, 0.4);
+    border-radius: 50%;
+    background: rgba(255, 248, 231, 0.85);
+    backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.3s, border-color 0.3s, transform 0.15s;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 0;
+    font-family: 'Gamja Flower', cursive;
+    font-weight: 700;
+    font-size: 18px;
+    color: #9B7AC7;
+  ">한</button>
+
+  <script>
+    // Canvas setup
+    const bgCanvas = document.getElementById('bg-canvas');
+    const bgCtx = bgCanvas.getContext('2d');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const cursor = document.getElementById('custom-cursor');
+
+    // Mimikyu angry cry sound
+    const mimikyuCry = new Audio('mimikyu.mp3');
+    mimikyuCry.volume = 0.8;
+    mimikyuCry.preload = 'auto';
+
+    // ===== Web Audio API: Glitch Sound System =====
+    let audioCtx = null;
+    let glitchMasterGain = null;
+    let staticNoiseNode = null;
+    let staticGainNode = null;
+    let staticFilterNode = null;
+
+    function initAudioContext() {
+      if (audioCtx) return;
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      glitchMasterGain = audioCtx.createGain();
+      glitchMasterGain.gain.value = 1.0;
+      glitchMasterGain.connect(audioCtx.destination);
+    }
+
+    // Sound toggle button
+    let audioUnlocked = false;
+    let soundEnabled = false;
+    const soundBtn = document.getElementById('sound-btn');
+    const iconMuted = document.getElementById('icon-muted');
+    const iconUnmuted = document.getElementById('icon-unmuted');
+
+    function toggleSound() {
+      if (!audioUnlocked) {
+        // First click: unlock AudioContext (browser requires user gesture)
+        initAudioContext();
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        mimikyuCry.play().then(() => {
+          mimikyuCry.pause();
+          mimikyuCry.currentTime = 0;
+        }).catch(() => { });
+        audioUnlocked = true;
+        console.log('Audio context unlocked');
+      }
+
+      soundEnabled = !soundEnabled;
+
+      if (soundEnabled) {
+        // Unmuted
+        iconMuted.style.display = 'none';
+        iconUnmuted.style.display = 'block';
+        soundBtn.style.borderColor = 'rgba(155, 122, 199, 0.8)';
+        soundBtn.style.background = 'rgba(255, 248, 231, 0.95)';
+        if (glitchMasterGain) glitchMasterGain.gain.value = 1.0;
+        mimikyuCry.muted = false;
+      } else {
+        // Muted
+        iconMuted.style.display = 'block';
+        iconUnmuted.style.display = 'none';
+        soundBtn.style.borderColor = 'rgba(155, 122, 199, 0.4)';
+        soundBtn.style.background = 'rgba(255, 248, 231, 0.85)';
+        if (glitchMasterGain) glitchMasterGain.gain.value = 0;
+        mimikyuCry.muted = true;
+      }
+    }
+
+    soundBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleSound();
+    });
+    soundBtn.addEventListener('mouseenter', () => {
+      soundBtn.style.transform = 'scale(1.1)';
+    });
+    soundBtn.addEventListener('mouseleave', () => {
+      soundBtn.style.transform = 'scale(1)';
+    });
+
+    // Auto-enable sound on first user interaction (browser requires gesture to unlock audio)
+    function autoEnableSound() {
+      if (audioUnlocked) return;
+      initAudioContext();
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      mimikyuCry.play().then(() => {
+        mimikyuCry.pause();
+        mimikyuCry.currentTime = 0;
+      }).catch(() => { });
+      audioUnlocked = true;
+      soundEnabled = true;
+      iconMuted.style.display = 'none';
+      iconUnmuted.style.display = 'block';
+      soundBtn.style.borderColor = 'rgba(155, 122, 199, 0.8)';
+      soundBtn.style.background = 'rgba(255, 248, 231, 0.95)';
+      if (glitchMasterGain) glitchMasterGain.gain.value = 1.0;
+      mimikyuCry.muted = false;
+      console.log('Audio auto-enabled');
+      document.removeEventListener('click', autoEnableSound);
+      document.removeEventListener('touchstart', autoEnableSound);
+    }
+    document.addEventListener('click', autoEnableSound, { once: false });
+    document.addEventListener('touchstart', autoEnableSound, { once: false });
+
+    // ===== LANGUAGE TOGGLE =====
+    const LANGUAGES = [
+      { code: 'ko', label: '한', disguise: '피카츄', reveal: '따라큐', title: '따라큐 #778', disguiseFont: "'Gamja Flower', cursive", revealFont: "'Gamja Flower', cursive", fontScale: 1.0, letterSpacing: 0, mobileHint: '눌러서 정체를 확인해 보세요' },
+      { code: 'ja', label: '日', disguise: 'ピカチュウ', reveal: 'ミミッキュ', title: 'ミミッキュ #778', disguiseFont: "'Gamja Flower', cursive", revealFont: "'Gamja Flower', cursive", fontScale: 0.75, letterSpacing: 0, mobileHint: 'タップして正体を確かめよう' },
+      { code: 'en', label: 'EN', disguise: 'Pikachu', reveal: 'Mimikyu', title: 'Mimikyu #778', disguiseFont: "'Gamja Flower', cursive", revealFont: "'Gamja Flower', cursive", fontScale: 0.85, letterSpacing: 8, mobileHint: 'Tap and hold to reveal its identity' }
+    ];
+
+    // Auto-detect browser language
+    function detectLangIndex() {
+      const browserLang = (navigator.language || navigator.userLanguage || 'ko').toLowerCase();
+      if (browserLang.startsWith('ja')) return 1;
+      if (browserLang.startsWith('en')) return 2;
+      return 0; // default: Korean
+    }
+    let currentLangIndex = detectLangIndex();
+    const langBtn = document.getElementById('lang-btn');
+    const mobileHintEl = document.getElementById('mobile-hint');
+
+    // Set initial label and hint based on detected language
+    langBtn.textContent = LANGUAGES[currentLangIndex].label;
+    mobileHintEl.textContent = LANGUAGES[currentLangIndex].mobileHint;
+    document.title = LANGUAGES[currentLangIndex].title;
+
+    function switchLanguage() {
+      currentLangIndex = (currentLangIndex + 1) % LANGUAGES.length;
+      langBtn.textContent = LANGUAGES[currentLangIndex].label;
+      mobileHintEl.textContent = LANGUAGES[currentLangIndex].mobileHint;
+      document.title = LANGUAGES[currentLangIndex].title;
+
+      // Reset to disguise state
+      currentState = STATES.DISGUISE;
+      crackProgress = 0;
+      stateTimer = 0;
+      document.body.classList.remove('exposed');
+      canvas.classList.remove('glitch-rgb');
+      document.body.classList.remove('glitch-flicker');
+      document.body.style.transform = '';
+      glitchOverlay.style.opacity = '0';
+      scanlinesEl.style.opacity = '0';
+      vignetteEl.style.opacity = '0';
+      noiseCanvas.style.opacity = '0';
+      lightBloom.style.opacity = '0';
+      brightnessFlash.style.opacity = '0';
+      revealedText.classList.remove('visible');
+      stopBrightnessGlitch();
+      fadeOutGlitchAudio(200);
+      eyeElements.forEach(el => el.remove());
+      eyeElements = [];
+      particles.forEach(p => { p.isBursting = false; p.burstDone = false; });
+
+      // Reinitialize with new language
+      initParticles();
+      updateRevealedTextSize();
+    }
+
+    langBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      switchLanguage();
+    });
+    langBtn.addEventListener('mouseenter', () => {
+      langBtn.style.transform = 'scale(1.1)';
+    });
+    langBtn.addEventListener('mouseleave', () => {
+      langBtn.style.transform = 'scale(1)';
+    });
+
+    // Play mimikyu cry
+    function playMimikyuCry() {
+      if (!soundEnabled) return;
+      mimikyuCry.currentTime = 0;
+      mimikyuCry.play().catch(() => { });
+    }
+
+    // Ensure audio context is ready
+    function ensureAudioReady() {
+      if (!soundEnabled || !audioUnlocked) return false;
+      initAudioContext();
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      return !!audioCtx;
+    }
+
+    // --- Static/crackling noise (지지직) ---
+    // Creates a continuous white noise source that can be faded in/out
+    function createStaticNoise() {
+      if (!ensureAudioReady()) return;
+      if (staticNoiseNode) return; // already running
+
+      const bufferSize = audioCtx.sampleRate * 2;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        // Crackling: mostly silence with random pops and bursts
+        const r = Math.random();
+        if (r < 0.08) {
+          data[i] = (Math.random() * 2 - 1) * 0.9; // sharp pop
+        } else if (r < 0.25) {
+          data[i] = (Math.random() * 2 - 1) * 0.3; // subtle crackle
+        } else {
+          data[i] = (Math.random() * 2 - 1) * 0.05; // floor noise
+        }
+      }
+
+      staticNoiseNode = audioCtx.createBufferSource();
+      staticNoiseNode.buffer = buffer;
+      staticNoiseNode.loop = true;
+
+      // Bandpass filter for that classic TV static sound
+      staticFilterNode = audioCtx.createBiquadFilter();
+      staticFilterNode.type = 'bandpass';
+      staticFilterNode.frequency.value = 3000;
+      staticFilterNode.Q.value = 0.5;
+
+      staticGainNode = audioCtx.createGain();
+      staticGainNode.gain.value = 0;
+
+      staticNoiseNode.connect(staticFilterNode);
+      staticFilterNode.connect(staticGainNode);
+      staticGainNode.connect(glitchMasterGain);
+      staticNoiseNode.start();
+    }
+
+    function setStaticVolume(vol, rampTime = 0.05) {
+      if (!staticGainNode || !audioCtx) return;
+      staticGainNode.gain.cancelScheduledValues(audioCtx.currentTime);
+      staticGainNode.gain.setTargetAtTime(vol, audioCtx.currentTime, rampTime);
+    }
+
+    function stopStaticNoise() {
+      if (staticNoiseNode) {
+        setStaticVolume(0, 0.1);
+        setTimeout(() => {
+          if (staticNoiseNode) {
+            staticNoiseNode.stop();
+            staticNoiseNode.disconnect();
+            staticNoiseNode = null;
+          }
+          if (staticFilterNode) { staticFilterNode.disconnect(); staticFilterNode = null; }
+          if (staticGainNode) { staticGainNode.disconnect(); staticGainNode = null; }
+        }, 300);
+      }
+    }
+
+    // --- Cracking phase: gradual static buildup ---
+    function updateCrackingAudio(progress) {
+      if (!ensureAudioReady()) return;
+      if (!staticNoiseNode) createStaticNoise();
+
+      // Static volume ramps up with crack progress
+      const vol = progress * progress * 0.4; // quadratic for dramatic buildup
+      setStaticVolume(vol, 0.1);
+
+      // Shift filter to get harsher at higher progress
+      if (staticFilterNode) {
+        staticFilterNode.frequency.setTargetAtTime(
+          2000 + progress * 6000, audioCtx.currentTime, 0.1
+        );
+      }
+    }
+
+    // --- Rhythmic crackle pattern: 지직...지직...치지직...뚝 ---
+    let crackleTimeouts = [];
+
+    function playRhythmicCrackle() {
+      if (!ensureAudioReady()) return;
+      if (!staticNoiseNode) createStaticNoise();
+
+      // Clear any previous pattern
+      crackleTimeouts.forEach(t => clearTimeout(t));
+      crackleTimeouts = [];
+
+      // Helper: short burst of static
+      function burst(vol, freq, duration) {
+        setStaticVolume(vol, 0.01);
+        if (staticFilterNode) {
+          staticFilterNode.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.01);
+        }
+        crackleTimeouts.push(setTimeout(() => setStaticVolume(0, 0.03), duration));
+      }
+
+      // 0ms: 지직 (short crackle)
+      burst(0.35, 3500, 200);
+
+      // 350ms: 지직 (short crackle, slightly louder)
+      crackleTimeouts.push(setTimeout(() => burst(0.45, 4500, 220), 350));
+
+      // 700ms: 치지직 (longer, more intense)
+      crackleTimeouts.push(setTimeout(() => burst(0.6, 6000, 400), 700));
+
+      // 1100ms: 뚝 (hard cut to silence)
+      crackleTimeouts.push(setTimeout(() => {
+        setStaticVolume(0, 0.01);
+      }, 1100));
+
+      // 1400ms: stop static completely (clean silence before cry)
+      crackleTimeouts.push(setTimeout(() => {
+        stopStaticNoise();
+      }, 1400));
+    }
+
+    // --- Fade out all glitch audio ---
+    function fadeOutGlitchAudio(duration) {
+      crackleTimeouts.forEach(t => clearTimeout(t));
+      crackleTimeouts = [];
+      if (!audioCtx) return;
+      const fadeTime = duration / 1000;
+      setStaticVolume(0, fadeTime * 0.3);
+      setTimeout(() => stopStaticNoise(), duration + 200);
+    }
+
+    // Mouse position
+    let mouseX = 0;
+    let mouseY = 0;
+
+    // State machine
+    const STATES = {
+      DISGUISE: 'disguise',
+      CRACKING: 'cracking',
+      EXPOSED: 'exposed',
+      FLEEING: 'fleeing',
+      REASSEMBLE: 'reassemble'
+    };
+
+    let currentState = STATES.DISGUISE;
+    let crackProgress = 0; // 0 = pikachu, 1 = mimikyu
+    let stateTimer = 0;
+
+    // Interaction settings
+    const CRACK_SPEED = 0.00025; // How fast cracking progresses per frame when cursor is near
+    const HEAL_SPEED = 0.0005; // How fast it heals when cursor is away
+
+    const EXPOSED_DURATION = 800; // ms
+    const FLEEING_DURATION = 800; // ms
+    const REASSEMBLE_DURATION = 4000; // ms
+
+    // Crayon background colors (warm cream/beige palette)
+    const bgColors = ['#F5E6C8', '#EDD9B5', '#F0DFC4', '#E8D4A8', '#F7EDD8'];
+    const crayonColors = ['#8B7355', '#5C4033', '#A0826D', '#3D2817', '#C19A6B', '#6F4E37'];
+
+    // Random helper
+    function random(min, max) {
+      return Math.random() * (max - min) + min;
+    }
+
+    function randomInt(min, max) {
+      return Math.floor(random(min, max));
+    }
+
+    function randomChoice(arr) {
+      return arr[randomInt(0, arr.length)];
+    }
+
+    // Crayon stroke (with breaks and irregularities)
+    function crayonLine(ctx, x1, y1, x2, y2, color, thickness = 2) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = thickness;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      const dist = Math.hypot(x2 - x1, y2 - y1);
+      const steps = Math.floor(dist / 3);
+
+      ctx.beginPath();
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const x = x1 + (x2 - x1) * t;
+        const y = y1 + (y2 - y1) * t;
+
+        // Add irregularity
+        const offsetX = random(-1, 1);
+        const offsetY = random(-1, 1);
+
+        // Random breaks in the line
+        if (Math.random() > 0.15) {
+          if (i === 0) ctx.moveTo(x + offsetX, y + offsetY);
+          else ctx.lineTo(x + offsetX, y + offsetY);
+        } else {
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(x + offsetX, y + offsetY);
+        }
+      }
+      ctx.stroke();
+    }
+
+    // Draw spiral doodle
+    function drawSpiral(ctx, cx, cy, size, color) {
+      const turns = random(2, 4);
+      const points = 50;
+
+      for (let i = 0; i < points - 1; i++) {
+        const angle1 = (i / points) * Math.PI * 2 * turns;
+        const angle2 = ((i + 1) / points) * Math.PI * 2 * turns;
+        const r1 = (i / points) * size;
+        const r2 = ((i + 1) / points) * size;
+
+        const x1 = cx + Math.cos(angle1) * r1;
+        const y1 = cy + Math.sin(angle1) * r1;
+        const x2 = cx + Math.cos(angle2) * r2;
+        const y2 = cy + Math.sin(angle2) * r2;
+
+        crayonLine(ctx, x1, y1, x2, y2, color, random(1.5, 3));
+      }
+    }
+
+    // Draw wavy line
+    function drawWavyLine(ctx, x, y, length, color) {
+      const segments = 8;
+      const amplitude = random(5, 15);
+
+      for (let i = 0; i < segments; i++) {
+        const x1 = x + (i / segments) * length;
+        const y1 = y + Math.sin((i / segments) * Math.PI * 4) * amplitude;
+        const x2 = x + ((i + 1) / segments) * length;
+        const y2 = y + Math.sin(((i + 1) / segments) * Math.PI * 4) * amplitude;
+
+        crayonLine(ctx, x1, y1, x2, y2, color, random(1, 2.5));
+      }
+    }
+
+    // Draw star
+    function drawStar(ctx, cx, cy, size, color) {
+      const points = 5;
+      const innerRadius = size * 0.4;
+      const outerRadius = size;
+
+      for (let i = 0; i < points * 2; i++) {
+        const angle1 = (i / (points * 2)) * Math.PI * 2 - Math.PI / 2;
+        const angle2 = ((i + 1) / (points * 2)) * Math.PI * 2 - Math.PI / 2;
+        const r1 = i % 2 === 0 ? outerRadius : innerRadius;
+        const r2 = (i + 1) % 2 === 0 ? outerRadius : innerRadius;
+
+        const x1 = cx + Math.cos(angle1) * r1;
+        const y1 = cy + Math.sin(angle1) * r1;
+        const x2 = cx + Math.cos(angle2) * r2;
+        const y2 = cy + Math.sin(angle2) * r2;
+
+        crayonLine(ctx, x1, y1, x2, y2, color, random(1, 2));
+      }
+    }
+
+    // Draw stick figure
+    function drawStickFigure(ctx, x, y, size, color) {
+      const headRadius = size * 0.3;
+      const bodyLength = size * 0.5;
+      const limbLength = size * 0.4;
+
+      // Head (circle)
+      for (let angle = 0; angle < Math.PI * 2; angle += 0.2) {
+        const x1 = x + Math.cos(angle) * headRadius;
+        const y1 = y + Math.sin(angle) * headRadius;
+        const x2 = x + Math.cos(angle + 0.2) * headRadius;
+        const y2 = y + Math.sin(angle + 0.2) * headRadius;
+        crayonLine(ctx, x1, y1, x2, y2, color, random(1, 2));
+      }
+
+      // Body
+      crayonLine(ctx, x, y + headRadius, x, y + headRadius + bodyLength, color, random(1.5, 2.5));
+
+      // Arms
+      crayonLine(ctx, x, y + headRadius + bodyLength * 0.3, x - limbLength, y + headRadius + bodyLength * 0.5, color, random(1, 2));
+      crayonLine(ctx, x, y + headRadius + bodyLength * 0.3, x + limbLength, y + headRadius + bodyLength * 0.5, color, random(1, 2));
+
+      // Legs
+      crayonLine(ctx, x, y + headRadius + bodyLength, x - limbLength * 0.7, y + headRadius + bodyLength + limbLength, color, random(1, 2));
+      crayonLine(ctx, x, y + headRadius + bodyLength, x + limbLength * 0.7, y + headRadius + bodyLength + limbLength, color, random(1, 2));
+    }
+
+    // Draw hatching/scribble
+    function drawHatching(ctx, x, y, width, height, color) {
+      const lines = randomInt(8, 15);
+      const angle = random(0, Math.PI);
+
+      for (let i = 0; i < lines; i++) {
+        const offset = (i / lines) * width;
+        const x1 = x + offset;
+        const y1 = y;
+        const x2 = x + offset + Math.cos(angle) * height;
+        const y2 = y + Math.sin(angle) * height;
+
+        crayonLine(ctx, x1, y1, x2, y2, color, random(0.8, 1.5));
+      }
+    }
+
+    // Draw text doodle
+    function drawTextDoodle(ctx, x, y, text, color) {
+      ctx.font = `${random(12, 20)}px 'Gamja Flower', cursive`;
+      ctx.fillStyle = color;
+      ctx.globalAlpha = random(0.3, 0.7);
+      ctx.fillText(text, x, y);
+      ctx.globalAlpha = 1;
+    }
+
+    // Generate paper grain noise
+    function drawPaperGrain(ctx, width, height) {
+      const imageData = ctx.createImageData(width, height);
+      const data = imageData.data;
+
+      for (let i = 0; i < data.length; i += 4) {
+        const noise = random(0, 30);
+        data[i] = 245 + noise;     // R
+        data[i + 1] = 235 + noise; // G
+        data[i + 2] = 215 + noise; // B
+        data[i + 3] = 255;         // A
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+    }
+
+    // Generate crayon background
+    function generateCrayonBackground() {
+      const width = bgCanvas.width;
+      const height = bgCanvas.height;
+
+      // Base color
+      bgCtx.fillStyle = randomChoice(bgColors);
+      bgCtx.fillRect(0, 0, width, height);
+
+      // Paper grain
+      bgCtx.globalAlpha = 0.3;
+      drawPaperGrain(bgCtx, width, height);
+      bgCtx.globalAlpha = 1;
+
+      // Random doodles
+      const doodleCount = Math.floor((width * height) / 15000);
+
+      for (let i = 0; i < doodleCount; i++) {
+        const x = random(0, width);
+        const y = random(0, height);
+        const color = randomChoice(crayonColors);
+        const type = randomInt(0, 5);
+        const rotation = random(0, Math.PI * 2); // Random rotation angle
+
+        // Apply rotation
+        bgCtx.save();
+        bgCtx.translate(x, y);
+        bgCtx.rotate(rotation);
+
+        switch (type) {
+          case 0: // Spiral
+            drawSpiral(bgCtx, 0, 0, random(15, 40), color);
+            break;
+          case 1: // Wavy line
+            drawWavyLine(bgCtx, 0, 0, random(50, 150), color);
+            break;
+          case 2: // Star
+            drawStar(bgCtx, 0, 0, random(8, 20), color);
+            break;
+          case 3: // Stick figure
+            drawStickFigure(bgCtx, 0, 0, random(20, 40), color);
+            break;
+          case 4: // Hatching
+            drawHatching(bgCtx, 0, 0, random(30, 60), random(30, 60), color);
+            break;
+          case 5: // Random small line
+            crayonLine(bgCtx, 0, 0, random(-30, 30), random(-30, 30), color, random(1, 3));
+            break;
+        }
+
+        bgCtx.restore();
+      }
+    }
+
+    // Set canvas size
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      bgCanvas.width = window.innerWidth;
+      bgCanvas.height = window.innerHeight;
+
+      // Regenerate background
+      generateCrayonBackground();
+    }
+
+    // Handle window resize
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Track mouse position
+    document.addEventListener('mousemove', (e) => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+      cursor.style.left = mouseX + 'px';
+      cursor.style.top = mouseY + 'px';
+    });
+
+    // ===== MOBILE TOUCH SUPPORT (Long Press) =====
+    let isTouchDevice = false;
+    let isTouching = false;
+
+    function handleTouchStart(e) {
+      // Don't intercept sound button touches
+      if (e.target.closest('#sound-btn') || e.target.closest('#lang-btn')) return;
+      e.preventDefault();
+
+      isTouchDevice = true;
+      isTouching = true;
+      cursor.style.display = 'none';
+
+      const touch = e.touches[0];
+      mouseX = touch.clientX;
+      mouseY = touch.clientY;
+
+      // Hide hint on first interaction
+      if (mobileHintEl.classList.contains('visible')) {
+        mobileHintEl.classList.remove('visible');
+        mobileHintEl.style.opacity = '0';
+      }
+    }
+
+    function handleTouchMove(e) {
+      if (!isTouching) return;
+      e.preventDefault();
+      const touch = e.touches[0];
+      mouseX = touch.clientX;
+      mouseY = touch.clientY;
+    }
+
+    function handleTouchEnd(e) {
+      if (!isTouching) return;
+      isTouching = false;
+      // Position far away so healing kicks in
+      mouseX = -9999;
+      mouseY = -9999;
+    }
+
+    document.addEventListener('touchstart', handleTouchStart, { passive: false });
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd, { passive: false });
+    document.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+
+    // Show hint on touch-capable devices
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+      cursor.style.display = 'none';
+      setTimeout(() => mobileHintEl.classList.add('visible'), 1500);
+    }
+
+
+    // ========== TEXT PARTICLE SYSTEM ==========
+
+    // Particle colors (warm yellow palette for Pikachu)
+    const pikachuColors = ['#FFD93D', '#F5C518', '#D4A017', '#FFE066', '#FFC300'];
+
+    // Particle colors (dark purple palette for Mimikyu)
+    const mimikyuColors = ['#9B7AC7', '#6B4F8A', '#3D2B5A', '#2A1B40'];
+
+    // Color interpolation helper
+    function hexToRgb(hex) {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      } : null;
+    }
+
+    function rgbToHex(r, g, b) {
+      return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+    }
+
+    function lerpColor(color1, color2, t) {
+      const c1 = hexToRgb(color1);
+      const c2 = hexToRgb(color2);
+      const r = Math.round(c1.r + (c2.r - c1.r) * t);
+      const g = Math.round(c1.g + (c2.g - c1.g) * t);
+      const b = Math.round(c1.b + (c2.b - c1.b) * t);
+      return rgbToHex(r, g, b);
+    }
+
+    // Particle class
+    class Particle {
+      constructor(pikachuX, pikachuY, mimikyuX, mimikyuY) {
+        // Two target positions
+        this.pikachuX = pikachuX;
+        this.pikachuY = pikachuY;
+        this.mimikyuX = mimikyuX || pikachuX;
+        this.mimikyuY = mimikyuY || pikachuY;
+
+        // Current position (start scattered)
+        this.x = pikachuX + random(-100, 100);
+        this.y = pikachuY + random(-100, 100);
+
+        this.baseSize = random(2, 5);
+        this.size = this.baseSize;
+
+        // Color (start with pikachu color)
+        this.pikachuColor = randomChoice(pikachuColors);
+        this.mimikyuColor = randomChoice(mimikyuColors);
+        this.color = this.pikachuColor;
+
+        this.speed = random(0.02, 0.05);
+
+        // Wobble/floating animation
+        this.wobbleOffset = random(0, Math.PI * 2);
+        this.wobbleSpeed = random(0.01, 0.03);
+        this.wobbleAmount = random(0.5, 2);
+
+        // Shape variation (circle vs ellipse)
+        this.isEllipse = Math.random() > 0.5;
+        this.ellipseRatio = random(0.6, 1.4);
+        this.rotation = random(0, Math.PI * 2);
+
+        // Individual floating motion
+        this.floatOffsetX = 0;
+        this.floatOffsetY = 0;
+        this.floatSpeed = random(0.005, 0.015);
+
+        // Fleeing motion
+        this.fleeVelX = 0;
+        this.fleeVelY = 0;
+        this.fleeAngle = random(0, Math.PI * 2);
+
+        // Burst explosion
+        this.burstVelX = 0;
+        this.burstVelY = 0;
+        this.isBursting = false;
+        this.burstDone = false;
+
+        // Shake intensity
+        this.shakeX = 0;
+        this.shakeY = 0;
+      }
+
+      update(time, progress, state) {
+        // Calculate target position based on progress
+        let targetX, targetY;
+
+        if (state === STATES.FLEEING) {
+          // Stay at mimikyu position (eyes + text visible in dark)
+          targetX = this.mimikyuX;
+          targetY = this.mimikyuY;
+          const dx = targetX - this.x;
+          const dy = targetY - this.y;
+          this.x += dx * this.speed;
+          this.y += dy * this.speed;
+          this.opacity = 1;
+
+        } else if (state === STATES.REASSEMBLE) {
+          if (!this.burstDone) {
+            // Before burst: stay at mimikyu position (따라큐 유지)
+            targetX = this.mimikyuX;
+            targetY = this.mimikyuY;
+            const dxM = targetX - this.x;
+            const dyM = targetY - this.y;
+            this.x += dxM * this.speed;
+            this.y += dyM * this.speed;
+          } else if (this.isBursting) {
+            // During burst: fly outward
+            this.x += this.burstVelX;
+            this.y += this.burstVelY;
+            this.burstVelX *= 0.96;
+            this.burstVelY *= 0.96;
+
+            if (Math.abs(this.burstVelX) < 0.5 && Math.abs(this.burstVelY) < 0.5) {
+              this.isBursting = false;
+            }
+
+            // Weak pull toward pikachu while flying
+            targetX = this.pikachuX;
+            targetY = this.pikachuY;
+            const dxR = targetX - this.x;
+            const dyR = targetY - this.y;
+            this.x += dxR * 0.005;
+            this.y += dyR * 0.005;
+          } else {
+            // After burst ends: converge to pikachu
+            targetX = this.pikachuX;
+            targetY = this.pikachuY;
+            const dxR = targetX - this.x;
+            const dyR = targetY - this.y;
+            this.x += dxR * 0.05;
+            this.y += dyR * 0.05;
+          }
+
+          this.opacity = 1;
+
+        } else {
+          // Normal states: interpolate between pikachu and mimikyu
+          targetX = this.pikachuX + (this.mimikyuX - this.pikachuX) * progress;
+          targetY = this.pikachuY + (this.mimikyuY - this.pikachuY) * progress;
+
+          // Move towards target with easing
+          const dx = targetX - this.x;
+          const dy = targetY - this.y;
+          this.x += dx * this.speed;
+          this.y += dy * this.speed;
+
+          this.opacity = 1;
+        }
+
+        // Color interpolation
+        if (state === STATES.REASSEMBLE) {
+          if (!this.burstDone) {
+            // Before burst: stay mimikyu
+            this.color = this.mimikyuColor;
+          } else {
+            // After burst: color based on distance to pikachu position
+            const distToPikachu = Math.hypot(this.x - this.pikachuX, this.y - this.pikachuY);
+            const colorT = Math.min(1, distToPikachu / 80);
+            this.color = lerpColor(this.pikachuColor, this.mimikyuColor, colorT);
+          }
+        } else {
+          this.color = lerpColor(this.pikachuColor, this.mimikyuColor, progress);
+        }
+
+        // Wobble size
+        const wobbleIntensity = state === STATES.EXPOSED ? 2 : 1;
+        this.size = Math.max(0.1, this.baseSize + Math.sin(time * this.wobbleSpeed + this.wobbleOffset) * this.wobbleAmount * wobbleIntensity);
+
+        // Floating motion
+        if (state === STATES.REASSEMBLE && this.isBursting) {
+          this.floatOffsetX = 0;
+          this.floatOffsetY = 0;
+        } else if (state !== STATES.REASSEMBLE) {
+          const floatIntensity = state === STATES.EXPOSED ? 0.5 : (state === STATES.FLEEING ? 0.3 : 1);
+          this.floatOffsetX = Math.sin(time * this.floatSpeed) * 3 * floatIntensity;
+          this.floatOffsetY = Math.cos(time * this.floatSpeed * 1.3) * 3 * floatIntensity;
+        }
+
+        // Shake (intense during exposed, gentle during fleeing)
+        if (state === STATES.EXPOSED) {
+          this.shakeX = random(-8, 8);
+          this.shakeY = random(-8, 8);
+        } else if (state === STATES.CRACKING) {
+          const shakeIntensity = progress * 5;
+          this.shakeX = random(-shakeIntensity, shakeIntensity);
+          this.shakeY = random(-shakeIntensity, shakeIntensity);
+        } else if (state === STATES.FLEEING) {
+          this.shakeX = random(-1.5, 1.5);
+          this.shakeY = random(-1.5, 1.5);
+        } else {
+          this.shakeX = 0;
+          this.shakeY = 0;
+        }
+      }
+
+      draw(ctx) {
+        ctx.save();
+        ctx.globalAlpha = this.opacity !== undefined ? this.opacity : 1;
+        ctx.translate(
+          this.x + this.floatOffsetX + this.shakeX,
+          this.y + this.floatOffsetY + this.shakeY
+        );
+
+        if (this.isEllipse) {
+          ctx.rotate(this.rotation);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, this.size, this.size * this.ellipseRatio, 0, 0, Math.PI * 2);
+          ctx.fillStyle = this.color;
+          ctx.fill();
+        } else {
+          ctx.beginPath();
+          ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+          ctx.fillStyle = this.color;
+          ctx.fill();
+        }
+
+        ctx.restore();
+      }
+    }
+
+    // Convert text to particle positions
+    function textToPositions(text, fontSize, font, letterSpacing) {
+      const positions = [];
+
+      // Create offscreen canvas
+      const offCanvas = document.createElement('canvas');
+      const offCtx = offCanvas.getContext('2d');
+
+      // Set font and measure text
+      offCtx.font = `bold ${fontSize}px ${font}`;
+      offCtx.letterSpacing = (letterSpacing || 0) + 'px';
+      const metrics = offCtx.measureText(text);
+      const textWidth = metrics.width;
+      const textHeight = fontSize;
+
+      // Set canvas size with padding
+      const padding = 20;
+      offCanvas.width = textWidth + padding * 2;
+      offCanvas.height = textHeight + padding * 2;
+
+      // Draw text
+      offCtx.font = `bold ${fontSize}px ${font}`;
+      offCtx.letterSpacing = (letterSpacing || 0) + 'px';
+      offCtx.fillStyle = 'white';
+      offCtx.textBaseline = 'middle';
+      offCtx.fillText(text, padding, textHeight / 2 + padding);
+
+      // Sample pixels
+      const imageData = offCtx.getImageData(0, 0, offCanvas.width, offCanvas.height);
+      const data = imageData.data;
+      const sampling = 4; // Sample every N pixels
+
+      for (let y = 0; y < offCanvas.height; y += sampling) {
+        for (let x = 0; x < offCanvas.width; x += sampling) {
+          const index = (y * offCanvas.width + x) * 4;
+          const alpha = data[index + 3];
+
+          if (alpha > 128) {
+            // Convert to canvas coordinates (centered)
+            const particleX = x - offCanvas.width / 2 + canvas.width / 2;
+            const particleY = y - offCanvas.height / 2 + canvas.height / 2;
+            positions.push({ x: particleX, y: particleY });
+          }
+        }
+      }
+
+      return { positions, width: textWidth, height: textHeight };
+    }
+
+    // Create dual-state particles
+    function createDualParticles(pikachuPositions, mimikyuPositions) {
+      const particles = [];
+      const maxLength = Math.max(pikachuPositions.length, mimikyuPositions.length);
+
+      for (let i = 0; i < maxLength; i++) {
+        const pikachuPos = pikachuPositions[i] || pikachuPositions[0];
+        const mimikyuPos = mimikyuPositions[i] || mimikyuPositions[0];
+
+        particles.push(new Particle(
+          pikachuPos.x,
+          pikachuPos.y,
+          mimikyuPos.x,
+          mimikyuPos.y
+        ));
+      }
+
+      return particles;
+    }
+
+    // Particles array
+    let particles = [];
+    let time = 0;
+
+    // Text bounding box for hitbox detection
+    let textBounds = { x: 0, y: 0, width: 0, height: 0 };
+    const HITBOX_PADDING = 40; // Extra padding around text bounding box
+
+    // Initialize particles
+    function initParticles() {
+      // Responsive font size (scaled by language)
+      const lang = LANGUAGES[currentLangIndex];
+      const baseFontSize = canvas.width < 600 ? 120 : 220;
+      const fontSize = Math.round(baseFontSize * lang.fontScale);
+
+      // Generate positions for both texts
+      const pikachuResult = textToPositions(lang.disguise, fontSize, lang.disguiseFont, lang.letterSpacing);
+      const mimikyuResult = textToPositions(lang.reveal, fontSize, lang.revealFont, lang.letterSpacing);
+
+      // Store text bounding box (use the larger of the two)
+      const maxWidth = Math.max(pikachuResult.width, mimikyuResult.width);
+      const maxHeight = Math.max(pikachuResult.height, mimikyuResult.height);
+      textBounds = {
+        x: canvas.width / 2 - maxWidth / 2 - HITBOX_PADDING,
+        y: canvas.height / 2 - maxHeight / 2 - HITBOX_PADDING,
+        width: maxWidth + HITBOX_PADDING * 2,
+        height: maxHeight + HITBOX_PADDING * 2
+      };
+
+      // Create dual-state particles
+      particles = createDualParticles(pikachuResult.positions, mimikyuResult.positions);
+
+      console.log(`Created ${particles.length} dual-state particles`);
+    }
+
+    // ========== GLITCH TRANSITION SYSTEM ==========
+
+    const glitchOverlay = document.getElementById('glitch-overlay');
+    const scanlinesEl = document.getElementById('scanlines');
+    const vignetteEl = document.getElementById('vignette');
+    const noiseCanvas = document.getElementById('noise-canvas');
+    const noiseCtx = noiseCanvas.getContext('2d');
+
+    let glitchActive = false;
+    let glitchIntensity = 0; // 0-1, ramps up during cracking
+
+    // Resize noise canvas
+    function resizeNoiseCanvas() {
+      noiseCanvas.width = Math.floor(window.innerWidth / 4);
+      noiseCanvas.height = Math.floor(window.innerHeight / 4);
+      noiseCanvas.style.width = window.innerWidth + 'px';
+      noiseCanvas.style.height = window.innerHeight + 'px';
+    }
+    resizeNoiseCanvas();
+    window.addEventListener('resize', resizeNoiseCanvas);
+
+    // Draw static noise
+    function drawNoise(intensity) {
+      if (intensity <= 0) return;
+      const w = noiseCanvas.width;
+      const h = noiseCanvas.height;
+      const imageData = noiseCtx.createImageData(w, h);
+      const data = imageData.data;
+
+      for (let i = 0; i < data.length; i += 4) {
+        if (Math.random() < intensity * 0.3) {
+          const v = Math.random() * 255;
+          data[i] = v;
+          data[i + 1] = v * 0.7;
+          data[i + 2] = v * 1.2;
+          data[i + 3] = Math.floor(intensity * 80 * Math.random());
+        }
+      }
+
+      noiseCtx.putImageData(imageData, 0, 0);
+    }
+
+    // Spawn glitch text fragments
+    function spawnGlitchFragments() {
+      const fragments = ['...?', 'Mi', 'mik', 'yu', '..!', '///'];
+      const count = randomInt(3, 6);
+
+      for (let i = 0; i < count; i++) {
+        const el = document.createElement('div');
+        el.className = 'glitch-fragment';
+        el.textContent = randomChoice(fragments);
+        el.style.left = random(10, 90) + 'vw';
+        el.style.top = random(20, 80) + 'vh';
+        el.style.fontSize = random(14, 42) + 'px';
+        el.style.setProperty('--fly-x', random(-200, 200) + 'px');
+        el.style.setProperty('--fly-y', random(-150, 150) + 'px');
+        el.style.setProperty('--fly-rot', random(-90, 90) + 'deg');
+        document.body.appendChild(el);
+
+        setTimeout(() => el.remove(), 700);
+      }
+    }
+
+    // Spawn horizontal glitch bars
+    function spawnGlitchBars() {
+      const count = randomInt(3, 8);
+
+      for (let i = 0; i < count; i++) {
+        setTimeout(() => {
+          const bar = document.createElement('div');
+          bar.className = 'glitch-bar';
+          bar.style.top = random(0, 100) + 'vh';
+          bar.style.height = random(2, 15) + 'px';
+          document.body.appendChild(bar);
+
+          setTimeout(() => bar.remove(), 400);
+        }, i * random(30, 80));
+      }
+    }
+
+    // Screen shake effect
+    function triggerScreenShake(intensity, duration) {
+      const startTime = performance.now();
+      const body = document.body;
+      function shake(now) {
+        const elapsed = now - startTime;
+        if (elapsed > duration) {
+          body.style.transform = '';
+          return;
+        }
+        const decay = 1 - (elapsed / duration);
+        const x = (Math.random() - 0.5) * intensity * decay * 2;
+        const y = (Math.random() - 0.5) * intensity * decay * 2;
+        const r = (Math.random() - 0.5) * intensity * decay * 0.3;
+        body.style.transform = `translate(${x}px, ${y}px) rotate(${r}deg)`;
+        requestAnimationFrame(shake);
+      }
+      requestAnimationFrame(shake);
+    }
+
+    // Brightness flash element
+    const brightnessFlash = document.getElementById('brightness-flash');
+    const revealedText = document.getElementById('revealed-text');
+
+    // Set revealed text font size
+    function updateRevealedTextSize() {
+      const lang = LANGUAGES[currentLangIndex];
+      const baseFontSize = canvas.width < 600 ? 120 : 220;
+      const fontSize = Math.round(baseFontSize * lang.fontScale);
+      revealedText.style.fontSize = fontSize + 'px';
+      revealedText.textContent = lang.reveal;
+      revealedText.style.fontFamily = lang.revealFont;
+      revealedText.style.letterSpacing = (lang.letterSpacing || 0) + 'px';
+    }
+    updateRevealedTextSize();
+    window.addEventListener('resize', updateRevealedTextSize);
+
+    // Dark-phase brightness glitch: random flashes against black
+    let brightnessGlitchInterval = null;
+    function startBrightnessGlitch() {
+      if (brightnessGlitchInterval) return;
+      brightnessGlitchInterval = setInterval(() => {
+        if (currentState !== STATES.EXPOSED) return;
+        // Random bright flash
+        const flashType = Math.random();
+        if (flashType < 0.3) {
+          // Full screen brief bright flash
+          brightnessFlash.style.background = `rgba(${randomInt(100, 200)}, ${randomInt(50, 120)}, ${randomInt(150, 255)}, ${random(0.03, 0.12)})`;
+          brightnessFlash.style.opacity = '1';
+          setTimeout(() => { brightnessFlash.style.opacity = '0'; }, random(30, 80));
+        } else if (flashType < 0.6) {
+          // Horizontal bright band
+          const y = random(0, 100);
+          const h = random(1, 8);
+          brightnessFlash.style.background = `linear-gradient(0deg, transparent ${y - h}%, rgba(155,122,199,${random(0.08, 0.2)}) ${y}%, transparent ${y + h}%)`;
+          brightnessFlash.style.opacity = '1';
+          setTimeout(() => { brightnessFlash.style.opacity = '0'; }, random(40, 120));
+        } else {
+          // Subtle purple pulse
+          brightnessFlash.style.background = `radial-gradient(ellipse at ${random(30, 70)}% ${random(30, 70)}%, rgba(100,60,180,${random(0.03, 0.08)}) 0%, transparent 60%)`;
+          brightnessFlash.style.opacity = '1';
+          setTimeout(() => { brightnessFlash.style.opacity = '0'; }, random(60, 200));
+        }
+      }, 60);
+    }
+
+    function stopBrightnessGlitch() {
+      if (brightnessGlitchInterval) {
+        clearInterval(brightnessGlitchInterval);
+        brightnessGlitchInterval = null;
+      }
+      brightnessFlash.style.opacity = '0';
+    }
+
+    // Full glitch burst (called at moment of full transformation)
+    function triggerGlitchBurst() {
+      glitchActive = true;
+
+      // RGB split on canvas
+      canvas.classList.add('glitch-rgb');
+
+      // Flicker
+      document.body.classList.add('glitch-flicker');
+
+      // Heavy screen shake
+      triggerScreenShake(12, 800);
+
+      // FULL BLACK overlay - completely hides the crayon background
+      glitchOverlay.style.background = '#000000';
+      glitchOverlay.style.opacity = '1';
+
+      // Scanlines & vignette
+      scanlinesEl.style.opacity = '1';
+      vignetteEl.style.opacity = '1';
+
+      // Noise as screen-blend on black (creates bright sparkle effect)
+      noiseCanvas.style.opacity = '0.7';
+
+      // Start brightness-based glitch in the dark
+      startBrightnessGlitch();
+
+      // Massive wave of fragments and bars
+      spawnGlitchFragments();
+      spawnGlitchFragments();
+      spawnGlitchBars();
+      spawnGlitchBars();
+
+      // Staggered waves
+      setTimeout(() => { spawnGlitchFragments(); spawnGlitchBars(); }, 80);
+      setTimeout(() => { spawnGlitchFragments(); spawnGlitchBars(); triggerScreenShake(6, 400); }, 200);
+      setTimeout(() => { spawnGlitchFragments(); spawnGlitchBars(); }, 350);
+      setTimeout(() => { spawnGlitchFragments(); }, 500);
+
+      // Start showing diamond eyes gradually (appear dim from darkness)
+      setTimeout(() => {
+        lastEyePositions = showDiamondEyes();
+      }, 400);
+    }
+
+    // Fade out glitch effects
+    function fadeOutGlitch(duration) {
+      canvas.classList.remove('glitch-rgb');
+      document.body.classList.remove('glitch-flicker');
+
+      // Gradual fade
+      glitchOverlay.style.transition = `opacity ${duration}ms ease`;
+      glitchOverlay.style.opacity = '0';
+
+      scanlinesEl.style.transition = `opacity ${duration}ms ease`;
+      scanlinesEl.style.opacity = '0';
+
+      vignetteEl.style.transition = `opacity ${duration}ms ease`;
+      vignetteEl.style.opacity = '0';
+
+      noiseCanvas.style.transition = `opacity ${duration}ms ease`;
+      noiseCanvas.style.opacity = '0';
+
+      setTimeout(() => {
+        glitchActive = false;
+        // Reset transitions
+        glitchOverlay.style.transition = 'opacity 0.15s ease';
+        scanlinesEl.style.transition = 'opacity 0.3s ease';
+        vignetteEl.style.transition = 'opacity 0.4s ease';
+        noiseCanvas.style.transition = '';
+      }, duration);
+    }
+
+    // Progressive glitch during cracking (building dread)
+    function updateCrackingGlitch(progress) {
+      if (progress < 0.2) {
+        // Whisper of something wrong
+        glitchOverlay.style.background = `rgba(20, 5, 35, ${progress * 0.2})`;
+        glitchOverlay.style.opacity = progress > 0.05 ? '1' : '0';
+        vignetteEl.style.opacity = String(progress * 0.6);
+        noiseCanvas.style.opacity = String(progress * 0.2);
+        scanlinesEl.style.opacity = '0';
+      } else if (progress < 0.5) {
+        // Growing unease
+        glitchOverlay.style.background = `rgba(20, 5, 35, ${progress * 0.4})`;
+        glitchOverlay.style.opacity = '1';
+        vignetteEl.style.opacity = String(progress * 0.8);
+        scanlinesEl.style.opacity = String((progress - 0.2) * 0.6);
+        noiseCanvas.style.opacity = String(progress * 0.35);
+
+        // Micro-glitches
+        if (Math.random() < progress * 0.04) {
+          spawnGlitchBars();
+        }
+        // Occasional RGB flash
+        if (Math.random() < 0.02) {
+          canvas.classList.add('glitch-rgb');
+          setTimeout(() => canvas.classList.remove('glitch-rgb'), random(30, 100));
+        }
+      } else if (progress < 0.8) {
+        // Panic zone
+        glitchOverlay.style.background = `rgba(15, 0, 25, ${progress * 0.6})`;
+        glitchOverlay.style.opacity = '1';
+        vignetteEl.style.opacity = String(Math.min(1, progress * 1.2));
+        scanlinesEl.style.opacity = String(progress * 0.8);
+        noiseCanvas.style.opacity = String(progress * 0.5);
+
+        // Frequent glitches
+        if (Math.random() < progress * 0.07) {
+          spawnGlitchBars();
+          if (Math.random() < 0.4) spawnGlitchFragments();
+        }
+
+        // RGB flicker bursts
+        if (Math.random() < 0.06) {
+          canvas.classList.add('glitch-rgb');
+          setTimeout(() => canvas.classList.remove('glitch-rgb'), random(50, 200));
+        }
+      } else {
+        // Critical - about to break
+        glitchOverlay.style.background = `rgba(5, 0, 15, ${0.3 + progress * 0.5})`;
+        glitchOverlay.style.opacity = '1';
+        vignetteEl.style.opacity = '1';
+        scanlinesEl.style.opacity = String(Math.min(1, progress * 1.1));
+        noiseCanvas.style.opacity = String(progress * 0.65);
+
+        // Constant glitch barrage
+        if (Math.random() < 0.12) {
+          spawnGlitchBars();
+          spawnGlitchFragments();
+        }
+
+        // Nearly permanent RGB split
+        if (Math.random() < 0.15) {
+          canvas.classList.add('glitch-rgb');
+          setTimeout(() => canvas.classList.remove('glitch-rgb'), random(80, 300));
+        }
+
+        // Micro screen shakes
+        if (Math.random() < 0.05) {
+          triggerScreenShake(3, 150);
+        }
+      }
+
+      // Draw noise
+      drawNoise(progress * 0.7);
+    }
+
+    // ========== DIAMOND STAR EYES + LIGHT BLOOM ==========
+
+    const lightBloom = document.getElementById('light-bloom');
+    let eyeElements = [];
+    let lastEyePositions = [];
+
+    // Draw a clean ✦ 4-pointed diamond star (Mimikyu eye style)
+    function drawDiamondStar(canvasEl, size) {
+      const pad = size * 1.5; // extra space for glow
+      const totalSize = size + pad;
+      canvasEl.width = totalSize * 2;
+      canvasEl.height = totalSize * 2;
+      const starCtx = canvasEl.getContext('2d');
+      const cx = totalSize;
+      const cy = totalSize;
+
+      // Soft outer glow (large, diffuse)
+      starCtx.save();
+      const outerGlow = starCtx.createRadialGradient(cx, cy, 0, cx, cy, size * 1.4);
+      outerGlow.addColorStop(0, 'rgba(255, 240, 200, 0.5)');
+      outerGlow.addColorStop(0.4, 'rgba(255, 220, 150, 0.2)');
+      outerGlow.addColorStop(1, 'transparent');
+      starCtx.fillStyle = outerGlow;
+      starCtx.fillRect(0, 0, totalSize * 2, totalSize * 2);
+      starCtx.restore();
+
+      // Main ✦ shape - sharp pointed diamond star
+      // Wider center body with very sharp tips
+      const tipLength = size * 0.95;   // how far the points extend
+      const bodyWidth = size * 0.18;   // center body width (thin = sharper)
+
+      starCtx.save();
+      starCtx.shadowBlur = size * 0.5;
+      starCtx.shadowColor = 'rgba(255, 250, 230, 0.9)';
+
+      starCtx.beginPath();
+      // Top point
+      starCtx.moveTo(cx, cy - tipLength);
+      // Curve to right point
+      starCtx.bezierCurveTo(
+        cx + bodyWidth * 0.4, cy - bodyWidth * 0.8,
+        cx + bodyWidth * 0.8, cy - bodyWidth * 0.4,
+        cx + tipLength, cy
+      );
+      // Curve to bottom point
+      starCtx.bezierCurveTo(
+        cx + bodyWidth * 0.8, cy + bodyWidth * 0.4,
+        cx + bodyWidth * 0.4, cy + bodyWidth * 0.8,
+        cx, cy + tipLength
+      );
+      // Curve to left point
+      starCtx.bezierCurveTo(
+        cx - bodyWidth * 0.4, cy + bodyWidth * 0.8,
+        cx - bodyWidth * 0.8, cy + bodyWidth * 0.4,
+        cx - tipLength, cy
+      );
+      // Curve back to top point
+      starCtx.bezierCurveTo(
+        cx - bodyWidth * 0.8, cy - bodyWidth * 0.4,
+        cx - bodyWidth * 0.4, cy - bodyWidth * 0.8,
+        cx, cy - tipLength
+      );
+      starCtx.closePath();
+
+      // Bright warm white fill
+      const grad = starCtx.createRadialGradient(cx, cy, 0, cx, cy, tipLength);
+      grad.addColorStop(0, '#FFFFFF');
+      grad.addColorStop(0.25, '#FFFEF5');
+      grad.addColorStop(0.5, '#FFF8E0');
+      grad.addColorStop(0.75, '#FFE8A0');
+      grad.addColorStop(1, 'rgba(255, 220, 130, 0.3)');
+      starCtx.fillStyle = grad;
+      starCtx.fill();
+      starCtx.restore();
+
+      // Bright center dot
+      starCtx.save();
+      starCtx.beginPath();
+      starCtx.arc(cx, cy, size * 0.08, 0, Math.PI * 2);
+      starCtx.fillStyle = '#FFFFFF';
+      starCtx.shadowBlur = size * 0.3;
+      starCtx.shadowColor = '#FFFFFF';
+      starCtx.fill();
+      starCtx.restore();
+
+      // Thin bright cross lines through the center (adds sparkle feel)
+      starCtx.save();
+      starCtx.globalAlpha = 0.7;
+      starCtx.strokeStyle = '#FFFFFF';
+      starCtx.lineWidth = 1;
+      starCtx.shadowBlur = 4;
+      starCtx.shadowColor = '#FFFDE8';
+
+      // Vertical line
+      starCtx.beginPath();
+      starCtx.moveTo(cx, cy - tipLength * 0.85);
+      starCtx.lineTo(cx, cy + tipLength * 0.85);
+      starCtx.stroke();
+
+      // Horizontal line
+      starCtx.beginPath();
+      starCtx.moveTo(cx - tipLength * 0.85, cy);
+      starCtx.lineTo(cx + tipLength * 0.85, cy);
+      starCtx.stroke();
+      starCtx.restore();
+    }
+
+    // Create diamond star eyes at center of text
+    function createDiamondEyes() {
+      // Remove old eyes
+      eyeElements.forEach(el => el.remove());
+      eyeElements = [];
+
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const fontSize = canvas.width < 600 ? 120 : 220;
+      const eyeSpacing = fontSize * 0.4;
+      const eyeSize = fontSize * 0.28;
+
+      // Two eyes - below the 따라큐 text
+      const eyePositions = [
+        { x: centerX - eyeSpacing, y: centerY + fontSize * 0.7 },
+        { x: centerX + eyeSpacing, y: centerY + fontSize * 0.7 }
+      ];
+
+      eyePositions.forEach((pos, idx) => {
+        const container = document.createElement('div');
+        container.className = 'diamond-eye';
+        container.style.left = pos.x + 'px';
+        container.style.top = pos.y + 'px';
+        container.style.opacity = '0';
+        container.style.transform = 'translate(-50%, -50%) scale(0.3)';
+
+        // Canvas for the ✦ diamond star
+        const starCanvas = document.createElement('canvas');
+        drawDiamondStar(starCanvas, eyeSize);
+        starCanvas.style.position = 'absolute';
+        starCanvas.style.top = '50%';
+        starCanvas.style.left = '50%';
+        starCanvas.style.transform = 'translate(-50%, -50%)';
+        container.appendChild(starCanvas);
+
+        // Soft warm glow behind
+        const glow = document.createElement('div');
+        glow.className = 'eye-glow';
+        glow.style.width = (eyeSize * 4) + 'px';
+        glow.style.height = (eyeSize * 4) + 'px';
+        glow.style.background = 'radial-gradient(circle, rgba(255, 245, 200, 0.5) 0%, rgba(255, 230, 150, 0.15) 50%, transparent 70%)';
+        container.appendChild(glow);
+
+        document.body.appendChild(container);
+        eyeElements.push(container);
+      });
+
+      return eyePositions;
+    }
+
+    // Animate eyes appearing: dim first, then brighten on scale up
+    function showDiamondEyes() {
+      const positions = createDiamondEyes();
+
+      eyeElements.forEach((eye, idx) => {
+        // Phase 1: Appear dim and small (ghostly but visible)
+        setTimeout(() => {
+          eye.style.transition = 'opacity 1.0s ease-out, transform 1.2s ease-out, filter 1.0s ease-out';
+          eye.style.opacity = '0.5';
+          eye.style.filter = 'brightness(0.7)';
+          eye.style.transform = 'translate(-50%, -50%) scale(0.6)';
+        }, idx * 150 + 50);
+      });
+
+      // No sparkles yet during dim phase
+      return positions;
+    }
+
+    // Brighten eyes (called from triggerLightBloom when they scale up)
+    function brightenEyes() {
+      eyeElements.forEach(eye => {
+        eye.style.transition = 'opacity 0.4s ease-in, transform 0.5s ease-in, filter 0.4s ease-in';
+        eye.style.opacity = '1';
+        eye.style.filter = 'brightness(1.5)';
+        eye.style.transform = 'translate(-50%, -50%) scale(1.2)';
+      });
+    }
+
+    // Burst all particles outward from center
+    function triggerParticleBurst() {
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+
+      particles.forEach(p => {
+        // Direction from center outward, with wide spread
+        const dx = p.x - centerX;
+        const dy = p.y - centerY;
+        const angle = Math.atan2(dy, dx) + random(-0.6, 0.6);
+        const speed = random(15, 45);
+        p.burstVelX = Math.cos(angle) * speed;
+        p.burstVelY = Math.sin(angle) * speed;
+        p.isBursting = true;
+        p.burstDone = true; // now particles know burst has fired
+      });
+    }
+
+    // Animate light bloom (brightening back to normal)
+    // Flow: BURST first (따라큐 깨짐) → THEN light bloom → converge to 피카츄
+    function triggerLightBloom() {
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const midX = (centerX / window.innerWidth) * 100;
+      const midY = (centerY / window.innerHeight) * 100;
+
+      // Phase 1 (0ms): Eyes brighten from dim → bright, then BURST + Mimikyu cry
+      brightenEyes();
+      triggerParticleBurst();
+      triggerScreenShake(10, 500);
+      playMimikyuCry();
+
+      // Phase 2 (600ms): Eyes blaze even brighter, bloom starts
+      setTimeout(() => {
+        lightBloom.style.background = `radial-gradient(ellipse at ${midX}% ${midY}%, rgba(255, 255, 240, 0.95) 0%, rgba(255, 248, 220, 0.6) 25%, rgba(255, 240, 200, 0.2) 50%, transparent 70%)`;
+        lightBloom.style.transition = 'opacity 0.5s ease-in';
+        lightBloom.style.opacity = '0.6';
+
+        eyeElements.forEach(eye => {
+          eye.style.transition = 'transform 0.5s ease-in, filter 0.5s ease-in';
+          eye.style.filter = 'brightness(2.5)';
+          eye.style.transform = 'translate(-50%, -50%) scale(2)';
+        });
+      }, 600);
+
+      // Phase 3 (1100ms): Full white flash, eyes dissolve, overlay fades
+      setTimeout(() => {
+        lightBloom.style.background = 'radial-gradient(ellipse at center, rgba(255,255,255,1) 0%, rgba(255,255,250,0.95) 40%, rgba(255,248,230,0.7) 70%, rgba(255,245,220,0.3) 100%)';
+        lightBloom.style.transition = 'opacity 0.25s ease-in';
+        lightBloom.style.opacity = '1';
+
+        // Eyes dissolve into light
+        eyeElements.forEach(eye => {
+          eye.style.transition = 'opacity 0.3s ease, transform 0.3s ease, filter 0.3s ease';
+          eye.style.opacity = '0';
+          eye.style.filter = 'brightness(4)';
+          eye.style.transform = 'translate(-50%, -50%) scale(3)';
+        });
+
+        // Fade dark overlay (reveal original background)
+        glitchOverlay.style.transition = 'opacity 0.6s ease';
+        glitchOverlay.style.opacity = '0';
+        vignetteEl.style.transition = 'opacity 0.5s ease';
+        vignetteEl.style.opacity = '0';
+        scanlinesEl.style.transition = 'opacity 0.4s ease';
+        scanlinesEl.style.opacity = '0';
+        noiseCanvas.style.transition = 'opacity 0.4s ease';
+        noiseCanvas.style.opacity = '0';
+      }, 1100);
+
+      // Phase 4 (1500ms): Light fades, particles converge to pikachu
+      setTimeout(() => {
+        lightBloom.style.transition = 'opacity 1.0s ease-out';
+        lightBloom.style.opacity = '0';
+
+        // Reset glitch state
+        glitchActive = false;
+        glitchOverlay.style.transition = 'opacity 0.15s ease';
+        scanlinesEl.style.transition = 'opacity 0.3s ease';
+        vignetteEl.style.transition = 'opacity 0.4s ease';
+        noiseCanvas.style.transition = '';
+
+        setTimeout(() => {
+          eyeElements.forEach(el => el.remove());
+          eyeElements = [];
+        }, 500);
+      }, 1500);
+    }
+
+    // State machine update
+    // Check if mouse is inside text bounding box
+    function isMouseInTextBounds() {
+      return mouseX >= textBounds.x &&
+        mouseX <= textBounds.x + textBounds.width &&
+        mouseY >= textBounds.y &&
+        mouseY <= textBounds.y + textBounds.height;
+    }
+
+    function updateStateMachine(deltaTime) {
+      const cursorNearText = isMouseInTextBounds();
+
+      switch (currentState) {
+        case STATES.DISGUISE:
+          // Gradually heal back to 0 if cursor is away
+          if (crackProgress > 0) {
+            crackProgress = Math.max(0, crackProgress - HEAL_SPEED * deltaTime);
+          }
+
+          // Check if cursor is near text
+          if (cursorNearText) {
+            currentState = STATES.CRACKING;
+            console.log('State: CRACKING');
+          }
+          break;
+
+        case STATES.CRACKING:
+          // Progress cracking if cursor is near
+          if (cursorNearText) {
+            crackProgress = Math.min(1, crackProgress + CRACK_SPEED * deltaTime);
+
+            // Progressive glitch buildup (visual + audio)
+            updateCrackingGlitch(crackProgress);
+            updateCrackingAudio(crackProgress);
+
+            // Check if fully cracked
+            if (crackProgress >= 1) {
+              currentState = STATES.EXPOSED;
+              stateTimer = 0;
+              document.body.classList.add('exposed');
+              triggerGlitchBurst();
+              // 지직...지직...치지직...뚝 패턴 시작
+              playRhythmicCrackle();
+              console.log('State: EXPOSED');
+            }
+          } else {
+            // Heal if cursor moves away
+            crackProgress = Math.max(0, crackProgress - HEAL_SPEED * deltaTime);
+
+            // Fade glitch as it heals
+            if (crackProgress > 0) {
+              updateCrackingGlitch(crackProgress);
+            } else {
+              glitchOverlay.style.opacity = '0';
+              vignetteEl.style.opacity = '0';
+              scanlinesEl.style.opacity = '0';
+              noiseCanvas.style.opacity = '0';
+            }
+
+            // Fade audio with healing
+            if (crackProgress > 0) {
+              updateCrackingAudio(crackProgress);
+            } else {
+              fadeOutGlitchAudio(300);
+            }
+
+            // Return to disguise if fully healed
+            if (crackProgress <= 0) {
+              currentState = STATES.DISGUISE;
+              console.log('State: DISGUISE');
+            }
+          }
+          break;
+
+        case STATES.EXPOSED:
+          stateTimer += deltaTime;
+
+          // Keep noise animating (bright sparkles against black via screen blend)
+          drawNoise(0.85);
+
+          // Ongoing glitch in darkness
+          if (Math.random() < 0.06) {
+            spawnGlitchBars();
+          }
+
+          // RGB split flickers during exposed
+          if (Math.random() < 0.03) {
+            canvas.classList.add('glitch-rgb');
+            setTimeout(() => canvas.classList.remove('glitch-rgb'), random(50, 200));
+          }
+
+          // Stay exposed for a duration (extended to let eyes + text show)
+          if (stateTimer >= EXPOSED_DURATION) {
+            currentState = STATES.FLEEING;
+            stateTimer = 0;
+            // Stop glitch effects, keep dark overlay
+            canvas.classList.remove('glitch-rgb');
+            document.body.classList.remove('glitch-flicker');
+            stopBrightnessGlitch();
+            scanlinesEl.style.transition = 'opacity 0.5s ease';
+            scanlinesEl.style.opacity = '0.3';
+            console.log('State: FLEEING');
+          }
+          break;
+
+        case STATES.FLEEING:
+          stateTimer += deltaTime;
+
+          // Gentle noise fade in darkness
+          const fleeProgress = stateTimer / FLEEING_DURATION;
+          drawNoise(Math.max(0, 0.4 - fleeProgress * 0.5));
+
+          // Flee for a duration - eyes + text are visible in darkness
+          if (stateTimer >= FLEEING_DURATION) {
+            currentState = STATES.REASSEMBLE;
+            stateTimer = 0;
+            document.body.classList.remove('exposed');
+
+            // Fade out glitch audio during reassembly
+            fadeOutGlitchAudio(1500);
+
+            // Trigger light bloom - eyes brighten and dissolve into light
+            triggerLightBloom();
+
+            console.log('State: REASSEMBLE');
+          }
+          break;
+
+        case STATES.REASSEMBLE:
+          stateTimer += deltaTime;
+
+          // Keep crackProgress at 1 - color is handled per-particle based on distance
+          crackProgress = 1;
+
+          // Reassemble for a duration
+          if (stateTimer >= REASSEMBLE_DURATION) {
+            currentState = STATES.DISGUISE;
+            crackProgress = 0;
+            stateTimer = 0;
+            // Reset burst state on all particles
+            particles.forEach(p => {
+              p.isBursting = false;
+              p.burstDone = false;
+              p.burstVelX = 0;
+              p.burstVelY = 0;
+            });
+            console.log('State: DISGUISE (healing from mimikyu)');
+          }
+          break;
+      }
+    }
+
+    // Update resize to reinitialize particles
+    const originalResize = resizeCanvas;
+    resizeCanvas = function () {
+      originalResize();
+      initParticles();
+    };
+
+    // Animation loop
+    let lastTime = performance.now();
+    function animate(currentTime) {
+      const deltaTime = currentTime - lastTime;
+      lastTime = currentTime;
+
+      time += deltaTime / 1000; // Convert to seconds
+
+      // Update state machine
+      updateStateMachine(deltaTime);
+
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Update and draw particles
+      particles.forEach(particle => {
+        particle.update(time, crackProgress, currentState);
+        particle.draw(ctx);
+      });
+
+      requestAnimationFrame(animate);
+    }
+
+    // Start: load font then init (preload chars for detected language)
+    const preloadLang = LANGUAGES[currentLangIndex];
+    const preloadText = preloadLang.disguise + preloadLang.reveal;
+    document.fonts.load("220px 'Gamja Flower'", preloadText).then(() => {
+      console.log('Font loaded');
+      initParticles();
+      animate(performance.now());
+    }).catch(() => {
+      console.warn('Font loading failed, starting with fallback');
+      initParticles();
+      animate(performance.now());
+    });
+  </script>
+</body>
+
+</html>
