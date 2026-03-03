@@ -8,12 +8,12 @@
 
   <!-- Open Graph / SNS Thumbnail -->
   <meta property="og:title" content="따라큐 (Mimikyu) #778">
-  <meta property="og:description" content="피카츄인 척하는 따라큐의 정체를 밝혀보세요!">
   <meta property="og:image" content="https://rosenzero.github.io/Pokemon-Interactive-Art-Lab/mimikyu/pixel_mimikyu.png">
   <meta property="og:url" content="https://rosenzero.github.io/Pokemon-Interactive-Art-Lab/mimikyu/">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary">
-  <meta name="twitter:image" content="https://rosenzero.github.io/Pokemon-Interactive-Art-Lab/mimikyu/pixel_mimikyu.png">
+  <meta name="twitter:image"
+    content="https://rosenzero.github.io/Pokemon-Interactive-Art-Lab/mimikyu/pixel_mimikyu.png">
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -30,7 +30,7 @@
     body {
       overflow: hidden;
       background-color: #FFF8E7;
-      cursor: none;
+      cursor: default;
       font-family: 'Gamja Flower', cursive;
       transition: background-color 1.5s ease;
       touch-action: none;
@@ -40,12 +40,17 @@
       background-color: #1A1325;
     }
 
-    body.exposed #sound-btn,
-    body.exposed #lang-btn {
-      z-index: 0 !important;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s ease, z-index 0s;
+    #sound-btn,
+    #lang-btn,
+    #dex-btn {
+      transition: background 0.3s, border-color 0.3s, transform 0.15s, opacity 0.5s ease;
+    }
+
+    #sound-btn.hidden-btn,
+    #lang-btn.hidden-btn,
+    #dex-btn.hidden-btn {
+      opacity: 0 !important;
+      pointer-events: none !important;
     }
 
     canvas {
@@ -63,18 +68,8 @@
       z-index: 2;
     }
 
-    /* Custom cursor */
     #custom-cursor {
-      position: fixed;
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      background-color: rgba(155, 122, 199, 0.5);
-      border: 2px solid #9B7AC7;
-      pointer-events: none;
-      transform: translate(-50%, -50%);
-      z-index: 10000;
-      transition: width 0.1s, height 0.1s;
+      display: none;
     }
 
     /* Glitch animation */
@@ -219,7 +214,7 @@
       left: 50%;
       transform: translate(-50%, -50%);
       font-family: 'Gamja Flower', cursive;
-      font-weight: 700;
+      font-weight: 400;
       color: transparent;
       -webkit-text-stroke: 1px rgba(155, 122, 199, 0);
       text-shadow: none;
@@ -542,20 +537,20 @@
       transform: translate(-50%, -50%);
       border-radius: 50%;
       filter: blur(18px);
-      animation: eyeGlowPulse 2s ease-in-out infinite;
+      animation: eyeGlowPulse 3.5s ease-in-out infinite;
     }
 
     @keyframes eyeGlowPulse {
 
       0%,
       100% {
-        opacity: 0.5;
+        opacity: 0.55;
         transform: translate(-50%, -50%) scale(1);
       }
 
       50% {
-        opacity: 0.9;
-        transform: translate(-50%, -50%) scale(1.2);
+        opacity: 0.75;
+        transform: translate(-50%, -50%) scale(1.08);
       }
     }
 
@@ -611,6 +606,119 @@
     }
 
 
+    /* ===== CREEPY WHISPER TEXT ===== */
+    #creepy-whisper {
+      position: fixed;
+      bottom: 12%;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 12;
+      pointer-events: none;
+      opacity: 0;
+      font-family: 'Times New Roman', 'Nanum Myeongjo', serif;
+      font-size: 17px;
+      font-style: italic;
+      color: rgba(180, 130, 200, 0);
+      text-align: center;
+      white-space: nowrap;
+      letter-spacing: 8px;
+      filter: blur(3px);
+      transition: opacity 0.5s ease, color 0.5s ease, filter 0.5s ease, letter-spacing 0.5s ease, transform 0.5s ease;
+    }
+
+    #creepy-whisper.visible {
+      opacity: 1;
+      color: rgba(180, 130, 200, 0.7);
+      filter: blur(0.3px);
+      letter-spacing: 3px;
+      animation: whisperFlicker 0.1s steps(2) infinite;
+    }
+
+    #creepy-whisper.fading {
+      opacity: 0;
+      color: rgba(180, 130, 200, 0);
+      filter: blur(5px);
+      letter-spacing: 12px;
+      transform: translateX(-50%) translateY(-6px);
+      transition: opacity 0.8s ease, color 0.8s ease, filter 0.8s ease, letter-spacing 0.8s ease, transform 0.8s ease;
+    }
+
+    @keyframes whisperFlicker {
+      0% {
+        transform: translateX(-50%) translate(0, 0) skewX(0deg);
+      }
+
+      25% {
+        transform: translateX(-50%) translate(-1.5px, 0.5px) skewX(-0.5deg);
+      }
+
+      50% {
+        transform: translateX(-50%) translate(1px, -0.5px) skewX(0.4deg);
+      }
+
+      75% {
+        transform: translateX(-50%) translate(-0.5px, 0) skewX(-0.2deg);
+      }
+
+      100% {
+        transform: translateX(-50%) translate(0, 0) skewX(0deg);
+      }
+    }
+
+    #creepy-whisper.visible::before {
+      content: attr(data-whisper);
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255, 70, 70, 0.22);
+      clip-path: inset(0 0 45% 0);
+      animation: whisperGlitchR 0.08s steps(3) infinite;
+    }
+
+    #creepy-whisper.visible::after {
+      content: attr(data-whisper);
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(80, 200, 255, 0.18);
+      clip-path: inset(50% 0 0 0);
+      animation: whisperGlitchC 0.1s steps(2) infinite;
+    }
+
+    @keyframes whisperGlitchR {
+      0% {
+        transform: translateX(-50%) translate(2px, -1px);
+      }
+
+      33% {
+        transform: translateX(-50%) translate(-3px, 0);
+      }
+
+      66% {
+        transform: translateX(-50%) translate(1px, 1px);
+      }
+
+      100% {
+        transform: translateX(-50%) translate(0, 0);
+      }
+    }
+
+    @keyframes whisperGlitchC {
+      0% {
+        transform: translateX(-50%) translate(-1px, 1px);
+      }
+
+      50% {
+        transform: translateX(-50%) translate(2px, -1px);
+      }
+
+      100% {
+        transform: translateX(-50%) translate(0, 0);
+      }
+    }
+
     /* ===== MOBILE TOUCH SUPPORT ===== */
     @media (hover: none) and (pointer: coarse) {
       body {
@@ -628,7 +736,7 @@
       left: 50%;
       transform: translateX(-50%);
       font-family: 'Gamja Flower', cursive;
-      font-weight: 700;
+      font-weight: 400;
       font-size: 20px;
       color: rgba(155, 122, 199, 0.7);
       z-index: 100;
@@ -655,6 +763,227 @@
         opacity: 1;
       }
     }
+
+    /* ===== POKEDEX MODAL ===== */
+    #pokedex-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 100000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s ease;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+
+    #pokedex-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Rounded square card */
+    #pokedex-modal {
+      position: relative;
+      width: 340px;
+      background: rgba(255, 252, 245, 0.92);
+      backdrop-filter: blur(12px);
+      border-radius: 28px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow:
+        0 16px 48px rgba(0, 0, 0, 0.35),
+        0 0 0 1px rgba(155, 122, 199, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6);
+      transform: translateY(20px) scale(0.95);
+      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    #pokedex-backdrop.open #pokedex-modal {
+      transform: translateY(0) scale(1);
+    }
+
+    /* Close button */
+    #dex-close {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 10;
+      background: rgba(155, 122, 199, 0.1);
+      border: 1.5px solid rgba(155, 122, 199, 0.2);
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      color: rgba(155, 122, 199, 0.6);
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      padding: 0;
+      line-height: 1;
+    }
+
+    #dex-close:hover {
+      background: rgba(155, 122, 199, 0.2);
+      color: rgba(155, 122, 199, 0.9);
+    }
+
+    /* Header */
+    #dex-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 18px 8px;
+    }
+
+    #dex-title-bar {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .dex-number {
+      font-family: 'Gamja Flower', cursive;
+      font-size: 15px;
+      color: rgba(155, 122, 199, 0.5);
+    }
+
+    .dex-name {
+      font-family: 'Gamja Flower', cursive;
+      font-size: 24px;
+      color: #3B2E50;
+    }
+
+    .dex-name-sub {
+      font-family: 'Gamja Flower', cursive;
+      font-size: 13px;
+      color: rgba(155, 122, 199, 0.45);
+    }
+
+    /* Sprite */
+    #dex-image-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px 18px 10px;
+    }
+
+    #dex-sprite {
+      width: 110px;
+      height: 110px;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      filter: drop-shadow(0 4px 12px rgba(155, 122, 199, 0.2));
+      animation: dexSpriteFloat 3s ease-in-out infinite;
+    }
+
+    @keyframes dexSpriteFloat {
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-4px);
+      }
+    }
+
+    #dex-type-bar {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .dex-type {
+      font-family: 'Gamja Flower', cursive;
+      font-size: 12px;
+      padding: 3px 12px;
+      border-radius: 10px;
+      color: #fff;
+      letter-spacing: 1px;
+    }
+
+    .dex-type.ghost {
+      background: rgba(112, 88, 152, 0.8);
+    }
+
+    .dex-type.fairy {
+      background: rgba(214, 133, 173, 0.8);
+    }
+
+    /* Divider */
+    .dex-divider {
+      height: 1px;
+      margin: 0 18px;
+      background: linear-gradient(90deg, transparent 0%, rgba(155, 122, 199, 0.2) 50%, transparent 100%);
+    }
+
+    /* Content */
+    #dex-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 18px 18px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(155, 122, 199, 0.2) transparent;
+    }
+
+    #dex-content::-webkit-scrollbar {
+      width: 3px;
+    }
+
+    #dex-content::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    #dex-content::-webkit-scrollbar-thumb {
+      background: rgba(155, 122, 199, 0.25);
+      border-radius: 2px;
+    }
+
+    .dex-quote {
+      font-family: 'Gamja Flower', cursive;
+      font-size: 15px;
+      color: #4A3D5E;
+      line-height: 1.7;
+      padding: 5px 0 5px 12px;
+      border-left: 2px solid rgba(155, 122, 199, 0.2);
+      margin: 8px 0;
+    }
+
+    @media (max-width: 480px) {
+      #pokedex-modal {
+        width: 92%;
+        max-width: 340px;
+        border-radius: 24px;
+      }
+
+      #dex-sprite {
+        width: 90px;
+        height: 90px;
+      }
+
+      .dex-name {
+        font-size: 21px;
+      }
+
+      #dex-content {
+        padding: 10px 14px 16px;
+      }
+
+      .dex-quote {
+        font-size: 14px;
+      }
+    }
   </style>
 </head>
 
@@ -669,31 +998,32 @@
   <canvas id="noise-canvas"></canvas>
   <div id="light-bloom"></div>
   <div id="custom-cursor"></div>
-  <div id="mobile-hint">눌러서 정체를 확인해 보세요</div>
+  <div id="mobile-hint">...살짝만 눌러볼래?</div>
+  <div id="creepy-whisper" data-whisper="이 안을 보지말아줘..">이 안을 보지말아줘..</div>
 
   <!-- Sound toggle button -->
   <button id="sound-btn" aria-label="Toggle sound" style="
-    position: fixed; top: 20px; right: 20px;
+    position: fixed; bottom: 20px; right: 20px;
     z-index: 99999; cursor: pointer;
-    width: 48px; height: 48px;
-    border: 2px solid rgba(155, 122, 199, 0.4);
+    width: 36px; height: 36px;
+    border: 1.5px solid rgba(155, 122, 199, 0.4);
     border-radius: 50%;
     background: rgba(255, 248, 231, 0.85);
     backdrop-filter: blur(6px);
     display: flex; align-items: center; justify-content: center;
     transition: background 0.3s, border-color 0.3s, transform 0.15s;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     padding: 0;
   ">
     <!-- Muted icon (default) -->
-    <svg id="icon-muted" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9B7AC7" stroke-width="2"
+    <svg id="icon-muted" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9B7AC7" stroke-width="2"
       stroke-linecap="round" stroke-linejoin="round">
       <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
       <line x1="23" y1="9" x2="17" y2="15" />
       <line x1="17" y1="9" x2="23" y2="15" />
     </svg>
     <!-- Unmuted icon (shown after click) -->
-    <svg id="icon-unmuted" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9B7AC7" stroke-width="2"
+    <svg id="icon-unmuted" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9B7AC7" stroke-width="2"
       stroke-linecap="round" stroke-linejoin="round" style="display:none;">
       <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
       <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
@@ -703,22 +1033,70 @@
 
   <!-- Language toggle button -->
   <button id="lang-btn" aria-label="Switch language" style="
-    position: fixed; top: 20px; right: 78px;
+    position: fixed; bottom: 20px; right: 64px;
     z-index: 99999; cursor: pointer;
-    width: 48px; height: 48px;
-    border: 2px solid rgba(155, 122, 199, 0.4);
+    width: 36px; height: 36px;
+    border: 1.5px solid rgba(155, 122, 199, 0.4);
     border-radius: 50%;
     background: rgba(255, 248, 231, 0.85);
     backdrop-filter: blur(6px);
     display: flex; align-items: center; justify-content: center;
     transition: background 0.3s, border-color 0.3s, transform 0.15s;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     padding: 0;
     font-family: 'Gamja Flower', cursive;
-    font-weight: 700;
-    font-size: 18px;
+    font-weight: 400;
+    font-size: 15px;
     color: #9B7AC7;
   ">한</button>
+
+  <!-- Pokédex button -->
+  <button id="dex-btn" aria-label="Open Pokédex" style="
+    position: fixed; top: 20px; right: 20px;
+    z-index: 99999; cursor: pointer;
+    width: 42px; height: 42px;
+    border: 1.5px solid rgba(200, 70, 70, 0.4);
+    border-radius: 50%;
+    background: rgba(225, 85, 80, 0.7);
+    backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.3s, border-color 0.3s, transform 0.15s;
+    box-shadow: 0 2px 8px rgba(180,30,30,0.12);
+    padding: 0;
+  ">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+    </svg>
+  </button>
+
+  <!-- Pokédex Modal -->
+  <div id="pokedex-backdrop">
+    <div id="pokedex-modal">
+      <button id="dex-close">&times;</button>
+      <div id="dex-header">
+        <div id="dex-title-bar">
+          <span class="dex-number">#778</span>
+          <span class="dex-name">따라큐</span>
+          <span class="dex-name-sub">Mimikyu</span>
+        </div>
+      </div>
+      <div id="dex-image-area">
+        <img src="pixel_mimikyu.png" alt="Mimikyu" id="dex-sprite">
+        <div id="dex-type-bar">
+          <span class="dex-type ghost">고스트</span>
+          <span class="dex-type fairy">페어리</span>
+        </div>
+      </div>
+      <div class="dex-divider"></div>
+      <div id="dex-content">
+        <p class="dex-quote">무서운 본모습을 피카츄를 본뜬 누더기로 가리고 다니는, 외로움을 많이 타는 포켓몬이다. 어둡고 볕이 들지 않는 곳에 살며, 사람들에게 겁을 주지 않으려고 피카츄
+          옷을 쓰고 다닌다.</p>
+        <p class="dex-quote">누더기 속 정체는 불명으로, 속을 본 사람은 공포로 쇼크사하거나 그날 밤 고통 속에 죽었다고 전해진다..</p>
+      </div>
+    </div>
+  </div>
 
   <script>
     // Canvas setup
@@ -830,9 +1208,9 @@
 
     // ===== LANGUAGE TOGGLE =====
     const LANGUAGES = [
-      { code: 'ko', label: '한', disguise: '피카츄', reveal: '따라큐', title: '따라큐 #778', disguiseFont: "'Gamja Flower', cursive", revealFont: "'Gamja Flower', cursive", fontScale: 1.0, letterSpacing: 0, mobileHint: '눌러서 정체를 확인해 보세요' },
-      { code: 'ja', label: '日', disguise: 'ピカチュウ', reveal: 'ミミッキュ', title: 'ミミッキュ #778', disguiseFont: "'Gamja Flower', cursive", revealFont: "'Gamja Flower', cursive", fontScale: 0.75, letterSpacing: 0, mobileHint: 'タップして正体を確かめよう' },
-      { code: 'en', label: 'EN', disguise: 'Pikachu', reveal: 'Mimikyu', title: 'Mimikyu #778', disguiseFont: "'Gamja Flower', cursive", revealFont: "'Gamja Flower', cursive", fontScale: 0.85, letterSpacing: 8, mobileHint: 'Tap and hold to reveal its identity' }
+      { code: 'ko', label: '한', disguise: '피카츄', reveal: '따라큐', title: '따라큐 #778', disguiseFont: "'Gamja Flower', cursive", revealFont: "'Gamja Flower', cursive", fontScale: 1.0, letterSpacing: 0, mobileHint: '...살짝만 눌러볼래?', whisper: '이 안을 보지말아줘..', dexName: '따라큐', dexNameSub: 'Mimikyu', dexTypes: ['고스트', '페어리'], dexQuotes: ['무서운 본모습을 피카츄를 본뜬 누더기로 가리고 다니는, 외로움을 많이 타는 포켓몬이다. 어둡고 볕이 들지 않는 곳에 살며, 사람들에게 겁을 주지 않으려고 피카츄 옷을 쓰고 다닌다.', '누더기 속 정체는 불명으로, 속을 본 사람은 공포로 쇼크사하거나 그날 밤 고통 속에 죽었다고 전해진다..'] },
+      { code: 'ja', label: '日', disguise: 'ピカチュウ', reveal: 'ミミッキュ', title: 'ミミッキュ #778', disguiseFont: "'Gamja Flower', cursive", revealFont: "'Gamja Flower', cursive", fontScale: 0.75, letterSpacing: 0, mobileHint: '...ちょっとだけ覗いてみる？', whisper: 'この中を見ないで..', dexName: 'ミミッキュ', dexNameSub: 'Mimikyu', dexTypes: ['ゴースト', 'フェアリー'], dexQuotes: ['恐ろしい本当の姿をピカチュウを真似たボロ布で隠して歩く、寂しがり屋のポケモンだ。暗くて日の当たらない場所に住み、人々を怖がらせないようにピカチュウの衣装を着ている。', 'ボロ布の中の正体は不明で、中を見た者は恐怖でショック死するか、その夜苦しみの中で死んだと伝えられている..'] },
+      { code: 'en', label: 'EN', disguise: 'Pikachu', reveal: 'Mimikyu', title: 'Mimikyu #778', disguiseFont: "'Gamja Flower', cursive", revealFont: "'Gamja Flower', cursive", fontScale: 0.85, letterSpacing: 8, mobileHint: '...just a little peek?', whisper: "Don't look inside..", dexName: 'Mimikyu', dexNameSub: 'ミミッキュ', dexTypes: ['Ghost', 'Fairy'], dexQuotes: ['A lonely Pokémon that hides its terrifying true form under a ragged cloth made to look like Pikachu. It lives in dark places away from sunlight, wearing a Pikachu costume so it won\'t frighten people.', 'Its true identity under the rag is unknown. Those who have seen what lies beneath have either died of shock from terror, or perished in agony that very night..'] }
     ];
 
     // Auto-detect browser language
@@ -846,16 +1224,40 @@
     const langBtn = document.getElementById('lang-btn');
     const mobileHintEl = document.getElementById('mobile-hint');
 
+    const creepyWhisperEl = document.getElementById('creepy-whisper');
+
+    function updateWhisperText() {
+      const lang = LANGUAGES[currentLangIndex];
+      creepyWhisperEl.textContent = lang.whisper;
+      creepyWhisperEl.setAttribute('data-whisper', lang.whisper);
+    }
+
+    function updatePokedex() {
+      const lang = LANGUAGES[currentLangIndex];
+      document.querySelector('.dex-name').textContent = lang.dexName;
+      document.querySelector('.dex-name-sub').textContent = lang.dexNameSub;
+      const typeSpans = document.querySelectorAll('.dex-type');
+      typeSpans[0].textContent = lang.dexTypes[0];
+      typeSpans[1].textContent = lang.dexTypes[1];
+      const quoteEls = document.querySelectorAll('.dex-quote');
+      quoteEls[0].textContent = lang.dexQuotes[0];
+      quoteEls[1].textContent = lang.dexQuotes[1];
+    }
+
     // Set initial label and hint based on detected language
     langBtn.textContent = LANGUAGES[currentLangIndex].label;
     mobileHintEl.textContent = LANGUAGES[currentLangIndex].mobileHint;
     document.title = LANGUAGES[currentLangIndex].title;
+    updateWhisperText();
+    updatePokedex();
 
     function switchLanguage() {
       currentLangIndex = (currentLangIndex + 1) % LANGUAGES.length;
       langBtn.textContent = LANGUAGES[currentLangIndex].label;
       mobileHintEl.textContent = LANGUAGES[currentLangIndex].mobileHint;
       document.title = LANGUAGES[currentLangIndex].title;
+      updateWhisperText();
+      updatePokedex();
 
       // Reset to disguise state
       currentState = STATES.DISGUISE;
@@ -892,6 +1294,66 @@
     });
     langBtn.addEventListener('mouseleave', () => {
       langBtn.style.transform = 'scale(1)';
+    });
+
+    // ===== POKÉDEX =====
+    const dexBtn = document.getElementById('dex-btn');
+    const pokedexBackdrop = document.getElementById('pokedex-backdrop');
+    const dexCloseBtn = document.getElementById('dex-close');
+    let pokedexOpen = false;
+
+    function hideUIButtons() {
+      soundBtn.classList.add('hidden-btn');
+      langBtn.classList.add('hidden-btn');
+      dexBtn.classList.add('hidden-btn');
+      mobileHintEl.classList.remove('visible');
+      mobileHintEl.style.opacity = '0';
+    }
+
+    function showUIButtons() {
+      soundBtn.classList.remove('hidden-btn');
+      langBtn.classList.remove('hidden-btn');
+      dexBtn.classList.remove('hidden-btn');
+      // 모바일인 경우 힌트 다시 표시
+      if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+        mobileHintEl.classList.add('visible');
+        mobileHintEl.style.opacity = '';
+      }
+    }
+
+    function openPokedex() {
+      pokedexOpen = true;
+      pokedexBackdrop.classList.add('open');
+    }
+
+    function closePokedex() {
+      pokedexOpen = false;
+      pokedexBackdrop.classList.remove('open');
+    }
+
+    dexBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openPokedex();
+    });
+
+    dexCloseBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closePokedex();
+    });
+
+    pokedexBackdrop.addEventListener('click', (e) => {
+      if (e.target === pokedexBackdrop) closePokedex();
+    });
+
+    dexBtn.addEventListener('mouseenter', () => {
+      dexBtn.style.transform = 'scale(1.1)';
+    });
+    dexBtn.addEventListener('mouseleave', () => {
+      dexBtn.style.transform = 'scale(1)';
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && pokedexOpen) closePokedex();
     });
 
     // Play mimikyu cry
@@ -1060,8 +1522,8 @@
     const CRACK_SPEED = 0.00025; // How fast cracking progresses per frame when cursor is near
     const HEAL_SPEED = 0.0005; // How fast it heals when cursor is away
 
-    const EXPOSED_DURATION = 800; // ms
-    const FLEEING_DURATION = 800; // ms
+    const EXPOSED_DURATION = 1150; // ms
+    const FLEEING_DURATION = 1150; // ms
     const REASSEMBLE_DURATION = 4000; // ms
 
     // Crayon background colors (warm cream/beige palette)
@@ -1311,8 +1773,6 @@
     document.addEventListener('mousemove', (e) => {
       mouseX = e.clientX;
       mouseY = e.clientY;
-      cursor.style.left = mouseX + 'px';
-      cursor.style.top = mouseY + 'px';
     });
 
     // ===== MOBILE TOUCH SUPPORT (Long Press) =====
@@ -1321,7 +1781,7 @@
 
     function handleTouchStart(e) {
       // Don't intercept sound button touches
-      if (e.target.closest('#sound-btn') || e.target.closest('#lang-btn')) return;
+      if (e.target.closest('#sound-btn') || e.target.closest('#lang-btn') || e.target.closest('#dex-btn') || e.target.closest('#pokedex-backdrop')) return;
       e.preventDefault();
 
       isTouchDevice = true;
@@ -1599,7 +2059,7 @@
       const offCtx = offCanvas.getContext('2d');
 
       // Set font and measure text
-      offCtx.font = `bold ${fontSize}px ${font}`;
+      offCtx.font = `${fontSize}px ${font}`;
       offCtx.letterSpacing = (letterSpacing || 0) + 'px';
       const metrics = offCtx.measureText(text);
       const textWidth = metrics.width;
@@ -1611,7 +2071,7 @@
       offCanvas.height = textHeight + padding * 2;
 
       // Draw text
-      offCtx.font = `bold ${fontSize}px ${font}`;
+      offCtx.font = `${fontSize}px ${font}`;
       offCtx.letterSpacing = (letterSpacing || 0) + 'px';
       offCtx.fillStyle = 'white';
       offCtx.textBaseline = 'middle';
@@ -1891,6 +2351,7 @@
       setTimeout(() => {
         lastEyePositions = showDiamondEyes();
       }, 400);
+
     }
 
     // Fade out glitch effects
@@ -2174,10 +2635,10 @@
     // Brighten eyes (called from triggerLightBloom when they scale up)
     function brightenEyes() {
       eyeElements.forEach(eye => {
-        eye.style.transition = 'opacity 0.4s ease-in, transform 0.5s ease-in, filter 0.4s ease-in';
+        eye.style.transition = 'opacity 0.6s ease-in, transform 0.7s ease-in, filter 0.6s ease-in';
         eye.style.opacity = '1';
-        eye.style.filter = 'brightness(1.5)';
-        eye.style.transform = 'translate(-50%, -50%) scale(1.2)';
+        eye.style.filter = 'brightness(1.3)';
+        eye.style.transform = 'translate(-50%, -50%) scale(1.1)';
       });
     }
 
@@ -2273,6 +2734,7 @@
     // State machine update
     // Check if mouse is inside text bounding box
     function isMouseInTextBounds() {
+      if (pokedexOpen) return false;
       return mouseX >= textBounds.x &&
         mouseX <= textBounds.x + textBounds.width &&
         mouseY >= textBounds.y &&
@@ -2292,6 +2754,7 @@
           // Check if cursor is near text
           if (cursorNearText) {
             currentState = STATES.CRACKING;
+            hideUIButtons();
             console.log('State: CRACKING');
           }
           break;
@@ -2305,6 +2768,13 @@
             updateCrackingGlitch(crackProgress);
             updateCrackingAudio(crackProgress);
 
+            // Show whisper warning at 50% crack
+            if (crackProgress > 0.5) {
+              const whisper = document.getElementById('creepy-whisper');
+              whisper.classList.remove('fading');
+              whisper.classList.add('visible');
+            }
+
             // Check if fully cracked
             if (crackProgress >= 1) {
               currentState = STATES.EXPOSED;
@@ -2313,11 +2783,25 @@
               triggerGlitchBurst();
               // 지직...지직...치지직...뚝 패턴 시작
               playRhythmicCrackle();
+              // Hide whisper on full exposure
+              const whisper = document.getElementById('creepy-whisper');
+              whisper.classList.remove('visible');
+              whisper.classList.add('fading');
               console.log('State: EXPOSED');
             }
           } else {
             // Heal if cursor moves away
             crackProgress = Math.max(0, crackProgress - HEAL_SPEED * deltaTime);
+
+            // Fade whisper when cursor leaves
+            if (crackProgress < 0.5) {
+              const whisper = document.getElementById('creepy-whisper');
+              if (whisper.classList.contains('visible')) {
+                whisper.classList.remove('visible');
+                whisper.classList.add('fading');
+                setTimeout(() => whisper.classList.remove('fading'), 800);
+              }
+            }
 
             // Fade glitch as it heals
             if (crackProgress > 0) {
@@ -2339,6 +2823,7 @@
             // Return to disguise if fully healed
             if (crackProgress <= 0) {
               currentState = STATES.DISGUISE;
+              showUIButtons();
               console.log('State: DISGUISE');
             }
           }
@@ -2388,6 +2873,12 @@
             stateTimer = 0;
             document.body.classList.remove('exposed');
 
+            // Hide creepy whisper
+            const whisperEl = document.getElementById('creepy-whisper');
+            whisperEl.classList.remove('visible');
+            whisperEl.classList.add('fading');
+            setTimeout(() => whisperEl.classList.remove('fading'), 800);
+
             // Fade out glitch audio during reassembly
             fadeOutGlitchAudio(1500);
 
@@ -2416,6 +2907,7 @@
               p.burstVelX = 0;
               p.burstVelY = 0;
             });
+            showUIButtons();
             console.log('State: DISGUISE (healing from mimikyu)');
           }
           break;
