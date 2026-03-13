@@ -1,5 +1,5 @@
 import { initBackground } from './background.js';
-import { initPhantom } from './phantom.js';
+import { initPhantom, getLangIdx, onLangChange } from './phantom.js';
 import { initGengar } from './gengar.js';
 import { initGastly } from './gastly.js';
 import { initPokedex } from './pokedex.js';
@@ -26,6 +26,12 @@ initPhantom();
 initGengar(ctx, canvas);
 initGastly(ctx, canvas, mouse);
 initPokedex();
+
+const TITLE_NAMES = ['팬텀', 'Gengar', 'ゲンガー'];
+document.title = (TITLE_NAMES[getLangIdx()] || 'Gengar') + ' #094';
+onLangChange((idx) => {
+  document.title = (TITLE_NAMES[idx] || 'Gengar') + ' #094';
+});
 
 function animate() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
