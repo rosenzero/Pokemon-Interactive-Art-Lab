@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  base: '/gengar/',
+  base: '/Pokemon-Interactive-Art-Lab/gengar/',
   server: {
     open: true,
   },
