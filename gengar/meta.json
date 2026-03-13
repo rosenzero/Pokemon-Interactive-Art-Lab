@@ -1,0 +1,12 @@
+{
+  "id": 94,
+  "name": "팬텀",
+  "nameEn": "Gengar",
+  "nameJa": "ゲンガー",
+  "types": ["고스트", "독"],
+  "generation": 1,
+  "essence": "어둠 속 눈과 이빨만 남은 존재 — 네가 보는 건 팬텀이 허락한 것뿐이다",
+  "techStack": "Canvas 2D + GSAP",
+  "color": "#7b2fff",
+  "path": "/gengar/"
+}
