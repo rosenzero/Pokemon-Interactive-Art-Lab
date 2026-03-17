@@ -90,7 +90,9 @@ function getScreenScale() {
 
 function getScaledOrbCount() {
   const scale = getScreenScale()
-  // 완만한 스케일 — 모바일에서도 최소 18개
+  const mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+    || (navigator.maxTouchPoints > 1 && window.innerWidth < 1024)
+  if (mobile) return Math.max(10, Math.min(15, Math.round(CONFIG.ORB_COUNT * scale)))
   const t = Math.max(0.65, scale)
   return Math.max(18, Math.min(40, Math.round(CONFIG.ORB_COUNT * t)))
 }

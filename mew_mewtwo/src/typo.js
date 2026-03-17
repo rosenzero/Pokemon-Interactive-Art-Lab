@@ -179,7 +179,8 @@ function drawTypo(ctx, w, h, mousePos) {
 // MEW: 유기적 파동 왜곡
 // ═══════════════════════════════════════════════════════
 function drawMewTypo(ctx, w, h, now, mx, my, hasMouse) {
-  const stripH = 3
+  const _isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+  const stripH = _isMobile ? 6 : 3
   const totalStrips = Math.ceil(h / stripH)
   const breathe = Math.sin(now * 0.4) * 3
 

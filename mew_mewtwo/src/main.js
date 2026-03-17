@@ -1,6 +1,6 @@
 import Matter from 'matter-js'
 import { CONFIG, getScreenScale, initPhysics, createOrbs, keepDrifting, updateSquish } from './physics.js'
-import { initRenderer } from './renderer.js'
+import { initRenderer, renderFxFrame } from './renderer.js'
 import { initTypo } from './typo.js'
 import { initAudio, updateCursorNote } from './sound.js'
 
@@ -8,6 +8,7 @@ import { getMode, getModeBlend, updateModeBlend, onModeChange } from './modes.js
 import { setupInteractions, getLockedOrb } from './interactions.js'
 import { initLang, getLangIdx, onLangChange } from './lang.js'
 import { initPokedex, refreshPokedex } from './pokedex.js'
+import { isMobile, scaleCanvas, throttle, shouldSkipFrame } from './perf.js'
 
 const { Runner, Events, Composite } = Matter
 
@@ -49,20 +50,18 @@ window.addEventListener('load', () => {
   const physicsCanvas = document.getElementById('physics-canvas')
   const fxCanvas = document.getElementById('fx-canvas')
 
-  // ── 캔버스 크기 설정 ──
+  // ── 캔버스 크기 설정 (DPR aware) ──
   function resizeCanvases() {
-    const w = window.innerWidth
-    const h = window.innerHeight
-    physicsCanvas.width = w
-    physicsCanvas.height = h
+    scaleCanvas(physicsCanvas)
   }
   resizeCanvases()
 
-  // ── 마우스 + 터치 추적 ──
-  window.addEventListener('mousemove', (e) => {
-    mousePos.x = e.clientX
-    mousePos.y = e.clientY
-  })
+  // ── 마우스 + 터치 추적 (모바일 쓰로틀) ──
+  const updateMouse = isMobile
+    ? throttle((x, y) => { mousePos.x = x; mousePos.y = y }, 33)
+    : (x, y) => { mousePos.x = x; mousePos.y = y }
+
+  window.addEventListener('mousemove', (e) => updateMouse(e.clientX, e.clientY))
   window.addEventListener('mouseleave', () => {
     mousePos.x = null
     mousePos.y = null
@@ -74,8 +73,7 @@ window.addEventListener('load', () => {
   }, { passive: true })
   window.addEventListener('touchmove', (e) => {
     const t = e.touches[0]
-    mousePos.x = t.clientX
-    mousePos.y = t.clientY
+    updateMouse(t.clientX, t.clientY)
   }, { passive: true })
   window.addEventListener('touchend', () => {
     mousePos.x = null
@@ -188,8 +186,14 @@ window.addEventListener('load', () => {
     return `rgb(${r},${g},${b})`
   }
 
-  function renderPhysics() {
-    pCtx.clearRect(0, 0, physicsCanvas.width, physicsCanvas.height)
+  function renderPhysics(timestamp) {
+    if (shouldSkipFrame(timestamp)) {
+      requestAnimationFrame(renderPhysics)
+      return
+    }
+    const logicalW = window.innerWidth
+    const logicalH = window.innerHeight
+    pCtx.clearRect(0, 0, logicalW, logicalH)
     const now = performance.now() * 0.001
 
     // ── 블렌드 업데이트 (0=mew, 1=mewtwo) ──
@@ -204,7 +208,7 @@ window.addEventListener('load', () => {
       mousePos.smoothY += (mousePos.y - mousePos.smoothY) * 0.15
     }
 
-    updateCursorNote(mousePos.x, mousePos.y, physicsCanvas.width, physicsCanvas.height)
+    updateCursorNote(mousePos.x, mousePos.y, logicalW, logicalH)
     keepDrifting(orbs)
     updateSquish(orbs)
 
@@ -240,7 +244,7 @@ window.addEventListener('load', () => {
               pCtx.globalAlpha = 0.8 * t * mewAlpha
               pCtx.fill()
 
-              if (bridgeR > 5) {
+              if (!isMobile && bridgeR > 5) {
                 const qx1 = a.position.x * 0.7 + b.position.x * 0.3
                 const qy1 = a.position.y * 0.7 + b.position.y * 0.3
                 const qx2 = a.position.x * 0.3 + b.position.x * 0.7
@@ -332,17 +336,21 @@ window.addEventListener('load', () => {
         const bodyR = r * 0.92
         // mew: 그라데이션, mewtwo: flat — blend로 크로스페이드
         if (mewAlpha > 0.3) {
-          // 유기적 그라데이션 (mew 비중 클 때)
-          const grad = pCtx.createRadialGradient(
-            -bodyR * 0.15 * scaleX, -bodyR * 0.15 * scaleY, bodyR * 0.1,
-            0, 0, bodyR * Math.max(scaleX, scaleY),
-          )
-          grad.addColorStop(0, lerpColorLighten(dna.mewColor, dna.mewtwoColor, blend, 40))
-          grad.addColorStop(0.6, color)
-          grad.addColorStop(1, lerpColorDarken(dna.mewColor, dna.mewtwoColor, blend, 30))
           pCtx.beginPath()
           pCtx.ellipse(0, 0, bodyR * scaleX, bodyR * scaleY, 0, 0, Math.PI * 2)
-          pCtx.fillStyle = grad
+          if (isMobile) {
+            // 모바일: flat fill (radialGradient 생략)
+            pCtx.fillStyle = color
+          } else {
+            const grad = pCtx.createRadialGradient(
+              -bodyR * 0.15 * scaleX, -bodyR * 0.15 * scaleY, bodyR * 0.1,
+              0, 0, bodyR * Math.max(scaleX, scaleY),
+            )
+            grad.addColorStop(0, lerpColorLighten(dna.mewColor, dna.mewtwoColor, blend, 40))
+            grad.addColorStop(0.6, color)
+            grad.addColorStop(1, lerpColorDarken(dna.mewColor, dna.mewtwoColor, blend, 30))
+            pCtx.fillStyle = grad
+          }
           pCtx.globalAlpha = 0.9 * mewAlpha
           pCtx.fill()
         }
@@ -447,8 +455,8 @@ window.addEventListener('load', () => {
         pCtx.restore()
         pCtx.globalAlpha = 1
 
-        // 위성 블롭
-        for (let k = 0; k < 3; k++) {
+        // 위성 블롭 (모바일 스킵)
+        for (let k = 0; k < (isMobile ? 0 : 3); k++) {
           const orbitAngle = now * 1.8 + k * (Math.PI * 2 / 3)
           const orbitDist = cursorR * 0.9
           const sx = mx + Math.cos(orbitAngle) * orbitDist
@@ -525,11 +533,13 @@ window.addEventListener('load', () => {
             const perpNx = -(oy - my) / (lineDist || 1)
             const perpNy = (ox - mx) / (lineDist || 1)
 
-            const arcConfigs = [
-              { freq: 3.0, amp: 30, alpha: 0.25, width: 2.0, color: '0, 255, 247' },
-              { freq: 4.5, amp: 18, alpha: 0.15, width: 1.2, color: '123, 47, 255' },
-              { freq: 6.0, amp: 12, alpha: 0.10, width: 0.8, color: '0, 255, 247' },
-            ]
+            const arcConfigs = isMobile
+              ? [{ freq: 3.0, amp: 30, alpha: 0.25, width: 2.0, color: '0, 255, 247' }]
+              : [
+                  { freq: 3.0, amp: 30, alpha: 0.25, width: 2.0, color: '0, 255, 247' },
+                  { freq: 4.5, amp: 18, alpha: 0.15, width: 1.2, color: '123, 47, 255' },
+                  { freq: 6.0, amp: 12, alpha: 0.10, width: 0.8, color: '0, 255, 247' },
+                ]
 
             for (const arc of arcConfigs) {
               pCtx.beginPath()
@@ -638,6 +648,9 @@ window.addEventListener('load', () => {
       mousePos._prevX = mousePos.x
       mousePos._prevY = mousePos.y
     }
+
+    // Unified render: FX canvas in same RAF loop
+    renderFxFrame()
 
     requestAnimationFrame(renderPhysics)
   }

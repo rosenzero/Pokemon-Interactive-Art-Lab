@@ -492,7 +492,18 @@ body::after {
    모바일 반응형
    ═══════════════════════════════════════════════ */
 
-@media (max-width: 600px) {
+@media (max-width: 600px), (hover: none) and (pointer: coarse) {
+  /* ── 모바일: SVG goo 필터 비활성화 (GPU 부담 감소) ── */
+  #physics-canvas,
+  body.mewtwo-mode #physics-canvas {
+    filter: none !important;
+  }
+
+  /* ── 스캔라인 비활성화 ── */
+  body::after {
+    display: none !important;
+  }
+
   /* ── UI 간격 축소 ── */
   #ui-layer {
     padding: 16px;

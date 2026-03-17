@@ -1,5 +1,6 @@
 import { drawTypo } from './typo.js'
 import { getModeBlend } from './modes.js'
+import { isMobile, scaleCanvas } from './perf.js'
 
 // ── 상태 ──
 let ctx = null
@@ -20,24 +21,33 @@ let mouseRipples = []
 let lastRippleX = 0
 let lastRippleY = 0
 
+// Particle caps
+const MAX_TRAILS = isMobile ? 60 : 200
+const MAX_SHOCKWAVES = isMobile ? 4 : 20
+const MAX_RIPPLES = isMobile ? 8 : 30
+
+// getOrbs ref for unified loop
+let getOrbsRef = null
+
 // ── 초기화 ──
 function initRenderer(canvasEl, getOrbs, getMousePos) {
   canvas = canvasEl
   ctx = canvas.getContext('2d')
   getMousePosRef = getMousePos || null
+  getOrbsRef = getOrbs
   resizeCanvas()
   window.addEventListener('resize', resizeCanvas)
+  // No own RAF loop — called from main.js unified loop
+}
 
-  function loop() {
-    renderLoop(getOrbs)
-    requestAnimationFrame(loop)
-  }
-  requestAnimationFrame(loop)
+// Called from main.js RAF loop
+function renderFxFrame() {
+  if (!getOrbsRef) return
+  renderLoop(getOrbsRef)
 }
 
 function resizeCanvas() {
-  canvas.width = window.innerWidth
-  canvas.height = window.innerHeight
+  scaleCanvas(canvas)
   hexInited = false
 }
 
@@ -49,8 +59,8 @@ function setRendererMode(mode) {
 
 // ── 메인 렌더 루프 ──
 function renderLoop(getOrbs) {
-  const w = canvas.width
-  const h = canvas.height
+  const w = window.innerWidth
+  const h = window.innerHeight
   bodies = typeof getOrbs === 'function' ? getOrbs() : []
 
   // 1. 캔버스 클리어 — blend로 부드럽게
@@ -97,14 +107,22 @@ function drawOrbGlow(orbBodies) {
     if (b > 0.01) {
       // Sharp glow — blend로 페이드인
       const glowR = r * (1.4 + pulse * 0.6)
-      const grad = ctx.createRadialGradient(x, y, r * 0.1, x, y, glowR)
-      grad.addColorStop(0, hexToRgba(color, (0.6 + pulseBoost) * b))
-      grad.addColorStop(0.6, hexToRgba(color, (0.2 + pulseBoost * 0.4) * b))
-      grad.addColorStop(1, hexToRgba(color, 0))
-      ctx.beginPath()
-      ctx.arc(x, y, glowR, 0, Math.PI * 2)
-      ctx.fillStyle = grad
-      ctx.fill()
+      if (isMobile) {
+        // Simple circle glow on mobile
+        ctx.beginPath()
+        ctx.arc(x, y, glowR, 0, Math.PI * 2)
+        ctx.fillStyle = hexToRgba(color, (0.2 + pulseBoost * 0.3) * b)
+        ctx.fill()
+      } else {
+        const grad = ctx.createRadialGradient(x, y, r * 0.1, x, y, glowR)
+        grad.addColorStop(0, hexToRgba(color, (0.6 + pulseBoost) * b))
+        grad.addColorStop(0.6, hexToRgba(color, (0.2 + pulseBoost * 0.4) * b))
+        grad.addColorStop(1, hexToRgba(color, 0))
+        ctx.beginPath()
+        ctx.arc(x, y, glowR, 0, Math.PI * 2)
+        ctx.fillStyle = grad
+        ctx.fill()
+      }
     }
 
     // Decay glow pulse
@@ -116,7 +134,8 @@ function drawOrbGlow(orbBodies) {
 
 // ── 트레일 파티클 ──
 function addTrail(x, y, vx, vy) {
-  const count = currentMode === 'mew' ? 3 : 2
+  if (trails.length >= MAX_TRAILS) return
+  const count = currentMode === 'mew' ? (isMobile ? 1 : 3) : (isMobile ? 1 : 2)
   for (let i = 0; i < count; i++) {
     trails.push({
       x: x + (Math.random() - 0.5) * 8,
@@ -166,9 +185,11 @@ function drawTrails() {
 
 // ── 충격파 ──
 function triggerShockwave(x, y, mode) {
+  if (shockwaves.length >= MAX_SHOCKWAVES) return
   if (mode === 'mew') {
     // 여러 겹, 천천히 확산
-    for (let i = 0; i < 3; i++) {
+    const layers = isMobile ? 1 : 3
+    for (let i = 0; i < layers; i++) {
       shockwaves.push({
         x, y,
         radius: 10 + i * 20,
@@ -249,24 +270,25 @@ function drawFluidCursorInfluence() {
     ctx.fillStyle = grad
     ctx.fill()
 
-    // 가까운 오브들에게 DNA 흡수 글로우 연결선
-    for (const body of bodies) {
-      const dna = body.plugin?.dna
-      if (!dna) continue
-      const dx = body.position.x - mx
-      const dy = body.position.y - my
-      const dist = Math.sqrt(dx * dx + dy * dy)
-      if (dist < influenceR && dist > 10) {
-        const t = 1 - dist / influenceR
-        ctx.beginPath()
-        ctx.moveTo(mx, my)
-        // 부드러운 곡선 연결
-        const cpx = (mx + body.position.x) / 2 + (Math.random() - 0.5) * 20
-        const cpy = (my + body.position.y) / 2 + (Math.random() - 0.5) * 20
-        ctx.quadraticCurveTo(cpx, cpy, body.position.x, body.position.y)
-        ctx.strokeStyle = hexToRgba(dna.mewColor, t * 0.12)
-        ctx.lineWidth = 1.5 + t * 2
-        ctx.stroke()
+    // 가까운 오브들에게 DNA 흡수 글로우 연결선 (모바일에서 스킵)
+    if (!isMobile) {
+      for (const body of bodies) {
+        const dna = body.plugin?.dna
+        if (!dna) continue
+        const dx = body.position.x - mx
+        const dy = body.position.y - my
+        const dist = Math.sqrt(dx * dx + dy * dy)
+        if (dist < influenceR && dist > 10) {
+          const t = 1 - dist / influenceR
+          ctx.beginPath()
+          ctx.moveTo(mx, my)
+          const cpx = (mx + body.position.x) / 2 + (Math.random() - 0.5) * 20
+          const cpy = (my + body.position.y) / 2 + (Math.random() - 0.5) * 20
+          ctx.quadraticCurveTo(cpx, cpy, body.position.x, body.position.y)
+          ctx.strokeStyle = hexToRgba(dna.mewColor, t * 0.12)
+          ctx.lineWidth = 1.5 + t * 2
+          ctx.stroke()
+        }
       }
     }
   } else {
@@ -294,8 +316,8 @@ function drawFluidCursorInfluence() {
     ctx.fillStyle = grad
     ctx.fill()
 
-    // 범위 내 오브에 에너지 연결선 — 전기 펄스 스타일
-    for (const body of bodies) {
+    // 범위 내 오브에 에너지 연결선 — 전기 펄스 스타일 (모바일 스킵)
+    for (const body of (isMobile ? [] : bodies)) {
       const dna = body.plugin?.dna
       if (!dna) continue
       const bx = body.position.x
@@ -346,7 +368,7 @@ function drawFluidCursorInfluence() {
   const dx = mx - lastRippleX
   const dy = my - lastRippleY
   const dist = Math.sqrt(dx * dx + dy * dy)
-  if (dist > 25) {
+  if (dist > 25 && mouseRipples.length < MAX_RIPPLES) {
     mouseRipples.push({
       x: mx, y: my,
       radius: 8,
@@ -388,19 +410,19 @@ function drawMouseRipples() {
 
 // ── Hex Background (MEWTWO 모드) ──
 function initHexColumns() {
-  const fontSize = 14
-  const cols = Math.floor(canvas.width / fontSize)
+  const fontSize = isMobile ? 20 : 14
+  const cols = Math.floor(window.innerWidth / fontSize)
   hexColumns = []
   for (let i = 0; i < cols; i++) {
     hexColumns.push({
       x: i * fontSize,
-      y: Math.random() * canvas.height * -1,
+      y: Math.random() * window.innerHeight * -1,
       speed: 0.3 + Math.random() * 0.8,
       chars: [],
       nextChar: 0,
     })
     // 미리 랜덤 hex 문자열 생성
-    const len = 8 + Math.floor(Math.random() * 16)
+    const len = isMobile ? (4 + Math.floor(Math.random() * 6)) : (8 + Math.floor(Math.random() * 16))
     for (let j = 0; j < len; j++) {
       hexColumns[i].chars.push(randomHex())
     }
@@ -412,7 +434,8 @@ function drawHexBackground() {
   if (getModeBlend() < 0.1) return
   if (!hexInited) initHexColumns()
 
-  const fontSize = 14
+  const fontSize = isMobile ? 20 : 14
+  const h = window.innerHeight
   ctx.font = `${fontSize}px 'Share Tech Mono', monospace`
 
   for (const col of hexColumns) {
@@ -420,7 +443,7 @@ function drawHexBackground() {
 
     for (let j = 0; j < col.chars.length; j++) {
       const charY = col.y + j * fontSize
-      if (charY < 0 || charY > canvas.height) continue
+      if (charY < 0 || charY > h) continue
 
       // 선두 문자는 밝게, 나머지는 희미하게
       const distFromHead = j / col.chars.length
@@ -435,7 +458,7 @@ function drawHexBackground() {
     }
 
     // 화면 밖으로 나가면 재순환
-    if (col.y > canvas.height + col.chars.length * fontSize) {
+    if (col.y > h + col.chars.length * fontSize) {
       col.y = -col.chars.length * fontSize
       col.speed = 0.3 + Math.random() * 0.8
       // 문자 다시 랜덤화
@@ -481,4 +504,4 @@ function randomHex() {
   return chars[Math.floor(Math.random() * 16)]
 }
 
-export { initRenderer, addTrail, triggerShockwave, setRendererMode }
+export { initRenderer, renderFxFrame, addTrail, triggerShockwave, setRendererMode }

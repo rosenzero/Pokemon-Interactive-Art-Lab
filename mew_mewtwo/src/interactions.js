@@ -1,5 +1,6 @@
 import Matter from 'matter-js'
 import { CONFIG } from './physics.js'
+import { isMobile } from './perf.js'
 import { addTrail, triggerShockwave } from './renderer.js'
 import { getMode, getMewtwoEasterEgg, triggerEasterEgg } from './modes.js'
 import {
@@ -237,7 +238,8 @@ function setupInteractions(engine, physicsCanvas, getOrbs) {
       prevLockedOrb = null
     }
 
-    // Orb-to-orb proximity detection (harmonic merging)
+    // Orb-to-orb proximity detection (harmonic merging) — skip on mobile every other call
+    if (isMobile && Math.random() > 0.5) return
     for (let i = 0; i < orbs.length; i++) {
       for (let j = i + 1; j < orbs.length; j++) {
         const orbA = orbs[i]
