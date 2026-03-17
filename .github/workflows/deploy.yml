@@ -29,11 +29,18 @@ jobs:
           npm ci
           npx vite build --base=/Pokemon-Interactive-Art-Lab/gengar/
 
+      - name: Build mew_mewtwo
+        working-directory: mew_mewtwo
+        run: |
+          npm ci
+          npx vite build --base=/Pokemon-Interactive-Art-Lab/mew_mewtwo/
+
       - name: Assemble site
         run: |
-          mkdir -p _site/gengar
+          mkdir -p _site/gengar _site/mew_mewtwo
           cp -r mimikyu/* _site/
           cp -r gengar/dist/* _site/gengar/
+          cp -r mew_mewtwo/dist/* _site/mew_mewtwo/
 
       - uses: actions/upload-pages-artifact@v3
         with:

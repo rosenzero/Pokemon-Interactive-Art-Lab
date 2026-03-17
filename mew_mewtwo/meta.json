@@ -1,0 +1,12 @@
+{
+  "id": [150, 151],
+  "name": "뮤 & 뮤츠",
+  "nameEn": "Mew & Mewtwo",
+  "types": ["Psychic"],
+  "generation": 1,
+  "essence": "같은 DNA, 다른 운명 — 빛 속의 순수함과 어둠 속의 의지",
+  "techStack": "Matter.js + HTML Canvas + CSS Variables",
+  "color": "#ffb3de",
+  "colorAlt": "#00fff7",
+  "path": "/pokemon-art-mew-mewtwo/"
+}

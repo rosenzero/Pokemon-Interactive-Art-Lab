@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>뮤 & 뮤츠 #151 / #150</title>
+
+  <!-- Favicon -->
+  <link rel="icon" href="/mew_pixel.png" type="image/png" />
+  <link rel="apple-touch-icon" href="/mew_pixel.png" />
+
+  <!-- 카카오톡 / Open Graph -->
+  <meta property="og:title" content="뮤 & 뮤츠 (Mew & Mewtwo) #151 / #150" />
+  <meta property="og:description" content="같은 DNA, 다른 운명 — 빛 속의 순수함과 어둠 속의 의지" />
+  <meta property="og:image" content="/mew_pixel.png" />
+  <meta property="og:type" content="website" />
+  <meta name="theme-color" content="#ffb3de" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Quicksand:wght@300;400;500;700&family=Fira+Code:wght@300;400;500;700&family=Share+Tech+Mono&family=Noto+Sans+KR:wght@400;900&family=Noto+Sans+JP:wght@400;900&family=Jua&family=Black+Han+Sans&family=Zen+Maru+Gothic:wght@900&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="/src/styles.css" />
+</head>
+<body>
+
+  <!-- Matter.js 물리 렌더링 캔버스 -->
+  <canvas id="physics-canvas"></canvas>
+
+  <!-- 트레일 / 파동 이펙트 캔버스 -->
+  <canvas id="fx-canvas"></canvas>
+
+  <!-- UI 오버레이 -->
+  <div id="ui-layer"></div>
+
+  <!-- SVG Goo Filters for Fluid Interaction -->
+  <svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;pointer-events:none" aria-hidden="true">
+    <defs>
+      <!-- MEW: Organic cell fluid — 부드럽고 탱글탱글한 메타볼 머징 -->
+      <filter id="goo-mew" color-interpolation-filters="linearRGB">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="12" result="blur" />
+        <feColorMatrix in="blur" type="matrix"
+          values="1 0 0 0 0
+                  0 1 0 0 0
+                  0 0 1 0 0
+                  0 0 0 22 -8" result="goo" />
+        <feBlend in="SourceGraphic" in2="goo" mode="normal" />
+      </filter>
+      <!-- MEWTWO: Digital sharp merge — 타이트한 경계 -->
+      <filter id="goo-mewtwo" color-interpolation-filters="linearRGB">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur" />
+        <feColorMatrix in="blur" type="matrix"
+          values="1 0 0 0 0
+                  0 1 0 0 0
+                  0 0 1 0 0
+                  0 0 0 30 -12" result="goo" />
+        <feBlend in="SourceGraphic" in2="goo" mode="normal" />
+      </filter>
+    </defs>
+  </svg>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

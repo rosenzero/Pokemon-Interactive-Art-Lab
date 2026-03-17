@@ -1,0 +1,569 @@
+/* ===================================================
+   MEW & MEWTWO — Interactive Web Art
+   =================================================== */
+
+/* ── Reset ── */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* ── CSS Variables: MEW MODE (default) ── */
+:root {
+  --bg: #f0e6ff;
+  --bg-secondary: #fce4f5;
+  --orb-primary: #ffb3de;
+  --orb-secondary: #d4aaff;
+  --orb-accent: #ffe4f5;
+  --text-primary: #6a0080;
+  --text-secondary: #9b4dca;
+  --btn-bg: rgba(255, 179, 222, 0.3);
+  --btn-border: #ffb3de;
+  --btn-text: #6a0080;
+  --glow-color: rgba(255, 179, 222, 0.6);
+  --font-main: 'Cormorant Garamond', serif;
+  --scanline-opacity: 0;
+  --hex-opacity: 0;
+}
+
+/* ── CSS Variables: MEWTWO MODE ── */
+body.mewtwo-mode {
+  --bg: #00060f;
+  --bg-secondary: #000d1a;
+  --orb-primary: #7b2fff;
+  --orb-secondary: #00fff7;
+  --orb-accent: #ff003c;
+  --text-primary: #00fff7;
+  --text-secondary: #7b2fff;
+  --btn-bg: rgba(0, 255, 247, 0.1);
+  --btn-border: #00fff7;
+  --btn-text: #00fff7;
+  --glow-color: rgba(0, 255, 247, 0.4);
+  --font-main: 'Share Tech Mono', monospace;
+  --scanline-opacity: 0.08;
+  --hex-opacity: 0.15;
+}
+
+/* ── Body ── */
+body {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--bg);
+  font-family: var(--font-main);
+  color: var(--text-primary);
+  transition: background 0.6s ease, color 0.6s ease, font-family 0.6s ease;
+  position: relative;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: none;
+}
+
+/* ── Canvases ── */
+canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+#physics-canvas {
+  z-index: 1;
+  filter: url(#goo-mew);
+  transition: filter 0.3s ease;
+  mix-blend-mode: normal;
+}
+
+body.mewtwo-mode #physics-canvas {
+  filter: url(#goo-mewtwo);
+}
+
+#fx-canvas {
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* ── UI Overlay ── */
+#ui-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+  padding: 32px;
+  display: flex;
+}
+
+/* ── Top Left: Mode Title ── */
+.ui-top-left {
+  position: absolute;
+  top: 32px;
+  left: 36px;
+}
+
+.mode-title {
+  font-family: var(--font-main);
+  font-size: 2.4rem;
+  font-weight: 300;
+  letter-spacing: 8px;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  transition: color 0.6s ease, font-family 0.6s ease, letter-spacing 0.6s ease;
+}
+
+/* ── Top Right: Interaction Hint ── */
+.ui-top-right {
+  position: absolute;
+  top: 38px;
+  right: 36px;
+}
+
+.interaction-hint {
+  font-family: var(--font-main);
+  font-size: 0.85rem;
+  letter-spacing: 2px;
+  color: var(--text-secondary);
+  opacity: 1;
+  transition: opacity 0.8s ease, color 0.6s ease;
+}
+
+.interaction-hint.hidden {
+  opacity: 0;
+}
+
+/* ── Bottom Left: Dex Info ── */
+.ui-bottom-left {
+  position: absolute;
+  bottom: 32px;
+  left: 36px;
+}
+
+.dex-info {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.dex-number {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.8rem;
+  letter-spacing: 2px;
+  color: var(--text-secondary);
+  opacity: 0.7;
+  transition: color 0.6s ease;
+}
+
+.dex-name {
+  font-family: var(--font-main);
+  font-size: 1.2rem;
+  letter-spacing: 4px;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  transition: color 0.6s ease, font-family 0.6s ease;
+}
+
+/* ── 우상단 아이콘 버튼 그룹 ── */
+.top-btn-group {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 30;
+  display: flex;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.icon-btn {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--btn-border);
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border-radius: 10px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background 0.3s ease,
+    border-color 0.6s ease,
+    color 0.6s ease,
+    box-shadow 0.3s ease,
+    transform 0.2s ease;
+}
+
+.icon-btn:hover {
+  background: var(--btn-border);
+  color: var(--bg);
+  box-shadow: 0 0 18px var(--glow-color), 0 0 40px var(--glow-color);
+  transform: scale(1.08);
+}
+
+.icon-btn:active {
+  transform: scale(0.95);
+}
+
+.icon-btn svg {
+  display: block;
+}
+
+/* DNA 버튼 호버 애니메이션 */
+.dna-btn svg {
+  transition: transform 0.3s ease;
+}
+
+.dna-btn:hover svg {
+  animation: dna-pulse 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes dna-pulse {
+  from { transform: scale(1) rotate(-5deg); }
+  to   { transform: scale(1.15) rotate(5deg); }
+}
+
+/* ── Scanline Overlay (MEWTWO mode) ── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.15) 2px,
+    rgba(0, 0, 0, 0.15) 4px
+  );
+  opacity: var(--scanline-opacity);
+  transition: opacity 0.6s ease;
+}
+
+/* ── Hint Auto-Fade ── */
+@keyframes hint-fade {
+  0%, 70% { opacity: 1; }
+  100%    { opacity: 0; }
+}
+
+.interaction-hint {
+  animation: hint-fade 3s ease-out forwards;
+}
+
+/* ── 언어 전환 인디케이터 (우하단) ── */
+.lang-indicator {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: monospace;
+  font-size: 13px;
+  pointer-events: auto;
+  user-select: none;
+  z-index: 20;
+}
+
+.lang-indicator-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-secondary);
+  opacity: 0.35;
+  transition: color 0.3s, opacity 0.3s;
+  padding: 4px 6px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lang-indicator-item.active {
+  opacity: 0.85;
+  color: var(--text-primary);
+}
+
+.lang-indicator-key {
+  font-size: 11px;
+  border: 1px solid var(--text-secondary);
+  border-radius: 2px;
+  padding: 0px 4px;
+  line-height: 1.5;
+  opacity: 0.5;
+  transition: border-color 0.3s, opacity 0.3s;
+}
+
+.lang-indicator-item.active .lang-indicator-key {
+  opacity: 0.8;
+  border-color: var(--text-primary);
+}
+
+/* ── 도감 모달 오버레이 ── */
+
+.pokedex-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0);
+  backdrop-filter: blur(0px);
+  pointer-events: none;
+  transition: background 0.4s, backdrop-filter 0.4s;
+}
+.pokedex-overlay.active {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  pointer-events: auto;
+}
+
+/* ── 도감 카드 ── */
+
+.pokedex-card {
+  width: 340px;
+  border-radius: 16px;
+  padding: 28px 28px 24px;
+  opacity: 0;
+  transform: scale(0.92) translateY(20px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+.pokedex-overlay.active .pokedex-card {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+/* MEW 테마 */
+.pokedex-card--mew {
+  background: linear-gradient(160deg, rgba(240, 220, 255, 0.95), rgba(255, 230, 245, 0.98));
+  border: 1px solid rgba(255, 179, 222, 0.4);
+  box-shadow:
+    0 0 40px rgba(255, 179, 222, 0.2),
+    0 0 80px rgba(255, 179, 222, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* MEWTWO 테마 */
+.pokedex-card--mewtwo {
+  background: linear-gradient(160deg, rgba(0, 10, 20, 0.95), rgba(0, 6, 15, 0.98));
+  border: 1px solid rgba(0, 255, 247, 0.25);
+  box-shadow:
+    0 0 40px rgba(0, 255, 247, 0.12),
+    0 0 80px rgba(123, 47, 255, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.pokedex-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.pokedex-number {
+  font-family: monospace;
+  font-size: 13px;
+  letter-spacing: 2px;
+}
+.pokedex-close {
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  transition: color 0.2s;
+  color: inherit;
+}
+.pokedex-close:hover {
+  opacity: 1;
+}
+
+.pokedex-sprite {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+.pokedex-sprite-img {
+  width: 96px;
+  height: 96px;
+  image-rendering: pixelated;
+}
+
+.pokedex-names {
+  margin-bottom: 16px;
+}
+.pokedex-name-main {
+  font-size: 36px;
+  line-height: 1.1;
+}
+.pokedex-card--mew .pokedex-name-main {
+  font-family: 'Jua', 'Zen Maru Gothic', sans-serif;
+  font-weight: 400;
+  color: rgba(106, 0, 128, 0.85);
+  text-shadow: 0 0 30px rgba(255, 179, 222, 0.4);
+}
+.pokedex-card--mewtwo .pokedex-name-main {
+  font-family: 'Black Han Sans', 'Noto Sans JP', sans-serif;
+  font-weight: 400;
+  color: rgba(0, 255, 247, 0.85);
+  text-shadow: 0 0 30px rgba(0, 255, 247, 0.3);
+}
+
+.pokedex-name-sub {
+  font-family: 'Noto Sans JP', monospace;
+  font-size: 14px;
+  margin-top: 4px;
+  letter-spacing: 1px;
+}
+.pokedex-card--mew .pokedex-name-sub {
+  color: rgba(155, 77, 202, 0.6);
+}
+.pokedex-card--mewtwo .pokedex-name-sub {
+  color: rgba(150, 120, 190, 0.6);
+}
+
+.pokedex-types {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.pokedex-type {
+  font-family: monospace;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.85);
+  padding: 3px 12px;
+  border-radius: 20px;
+  letter-spacing: 1px;
+}
+
+.pokedex-divider {
+  height: 1px;
+  margin-bottom: 16px;
+}
+
+.pokedex-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.pokedex-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: monospace;
+  font-size: 12px;
+}
+.pokedex-card--mew .pokedex-label {
+  color: rgba(155, 77, 202, 0.5);
+  letter-spacing: 1px;
+}
+.pokedex-card--mew .pokedex-value {
+  color: rgba(106, 0, 128, 0.7);
+}
+.pokedex-card--mewtwo .pokedex-label {
+  color: rgba(150, 120, 190, 0.5);
+  letter-spacing: 1px;
+}
+.pokedex-card--mewtwo .pokedex-value {
+  color: rgba(0, 255, 247, 0.7);
+}
+
+.pokedex-essence {
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 13px;
+  line-height: 1.7;
+  font-style: italic;
+  padding-left: 12px;
+}
+.pokedex-card--mew .pokedex-essence {
+  color: rgba(155, 77, 202, 0.7);
+  border-left: 2px solid rgba(255, 179, 222, 0.4);
+}
+.pokedex-card--mewtwo .pokedex-essence {
+  color: rgba(170, 140, 210, 0.7);
+  border-left: 2px solid rgba(0, 255, 247, 0.3);
+}
+
+/* ═══════════════════════════════════════════════
+   모바일 반응형
+   ═══════════════════════════════════════════════ */
+
+@media (max-width: 600px) {
+  /* ── UI 간격 축소 ── */
+  #ui-layer {
+    padding: 16px;
+  }
+  .ui-top-left  { top: 16px; left: 16px; }
+  .ui-top-right { top: 16px; right: 16px; }
+  .ui-bottom-left { bottom: 16px; left: 16px; }
+
+  .mode-title {
+    font-size: 1.4rem;
+    letter-spacing: 4px;
+  }
+
+  /* ── 버튼 그룹 ── */
+  .top-btn-group {
+    top: 14px;
+    right: 14px;
+    gap: 6px;
+  }
+  .icon-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+  }
+  .icon-btn svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  /* ── 언어 인디케이터 ── */
+  .lang-indicator {
+    right: 14px;
+    bottom: 14px;
+    gap: 4px;
+    font-size: 12px;
+  }
+  .lang-indicator-item {
+    padding: 6px 8px;
+  }
+  .lang-indicator-key {
+    font-size: 10px;
+  }
+
+  /* ── 도감 카드 ── */
+  .pokedex-card {
+    width: calc(100vw - 40px);
+    max-width: 340px;
+    padding: 20px 20px 18px;
+  }
+  .pokedex-name-main {
+    font-size: 28px;
+  }
+  .pokedex-sprite-img {
+    width: 80px;
+    height: 80px;
+  }
+  .pokedex-essence {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 380px) {
+  .pokedex-card {
+    width: calc(100vw - 24px);
+    padding: 16px 16px 14px;
+  }
+  .pokedex-name-main {
+    font-size: 24px;
+  }
+  .pokedex-sprite-img {
+    width: 64px;
+    height: 64px;
+  }
+}
