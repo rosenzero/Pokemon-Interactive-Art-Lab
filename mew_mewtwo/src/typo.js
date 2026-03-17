@@ -62,6 +62,10 @@ function initTypo() {
     currentLangIdx = idx
     cachedText = '' // 언어 변경 시 캐시 무효화
   })
+  // 폰트 로드 완료 후 캐시 무효화 — 첫 로드 시 시스템 폰트로 캐시되는 문제 방지
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => { cachedText = '' })
+  }
 }
 
 function setTypoMode(mode) {

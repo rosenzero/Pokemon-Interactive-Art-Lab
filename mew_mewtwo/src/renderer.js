@@ -270,9 +270,12 @@ function drawFluidCursorInfluence() {
     ctx.fillStyle = grad
     ctx.fill()
 
-    // 가까운 오브들에게 DNA 흡수 글로우 연결선 (모바일에서 스킵)
-    if (!isMobile) {
+    // 가까운 오브들에게 DNA 흡수 글로우 연결선 (모바일: 가장 가까운 3개만, 직선)
+    {
+      const maxLines = isMobile ? 3 : bodies.length
+      let drawn = 0
       for (const body of bodies) {
+        if (drawn >= maxLines) break
         const dna = body.plugin?.dna
         if (!dna) continue
         const dx = body.position.x - mx
@@ -282,12 +285,17 @@ function drawFluidCursorInfluence() {
           const t = 1 - dist / influenceR
           ctx.beginPath()
           ctx.moveTo(mx, my)
-          const cpx = (mx + body.position.x) / 2 + (Math.random() - 0.5) * 20
-          const cpy = (my + body.position.y) / 2 + (Math.random() - 0.5) * 20
-          ctx.quadraticCurveTo(cpx, cpy, body.position.x, body.position.y)
+          if (isMobile) {
+            ctx.lineTo(body.position.x, body.position.y)
+          } else {
+            const cpx = (mx + body.position.x) / 2 + (Math.random() - 0.5) * 20
+            const cpy = (my + body.position.y) / 2 + (Math.random() - 0.5) * 20
+            ctx.quadraticCurveTo(cpx, cpy, body.position.x, body.position.y)
+          }
           ctx.strokeStyle = hexToRgba(dna.mewColor, t * 0.12)
           ctx.lineWidth = 1.5 + t * 2
           ctx.stroke()
+          drawn++
         }
       }
     }
@@ -316,49 +324,59 @@ function drawFluidCursorInfluence() {
     ctx.fillStyle = grad
     ctx.fill()
 
-    // 범위 내 오브에 에너지 연결선 — 전기 펄스 스타일 (모바일 스킵)
-    for (const body of (isMobile ? [] : bodies)) {
-      const dna = body.plugin?.dna
-      if (!dna) continue
-      const bx = body.position.x
-      const by = body.position.y
-      const dx = bx - mx
-      const dy = by - my
-      const dist = Math.sqrt(dx * dx + dy * dy)
-      if (dist < scanR && dist > 10) {
-        const t = 1 - dist / scanR
+    // 범위 내 오브에 에너지 연결선 — 전기 펄스 스타일 (모바일: 3개 제한, 간소화)
+    {
+      const maxEnergyLines = isMobile ? 3 : bodies.length
+      let eDrawn = 0
+      for (const body of bodies) {
+        if (eDrawn >= maxEnergyLines) break
+        const dna = body.plugin?.dna
+        if (!dna) continue
+        const bx = body.position.x
+        const by = body.position.y
+        const dx = bx - mx
+        const dy = by - my
+        const dist = Math.sqrt(dx * dx + dy * dy)
+        if (dist < scanR && dist > 10) {
+          const t = 1 - dist / scanR
 
-        // 메인 에너지 라인 — 부드러운 곡선
-        const midX = (mx + bx) / 2
-        const midY = (my + by) / 2
-        const perpX = -(by - my) / dist
-        const perpY = (bx - mx) / dist
-        const waveAmt = Math.sin(now * 2 + dna.dnaIndex) * 25 * t
+          const midX = (mx + bx) / 2
+          const midY = (my + by) / 2
+          const perpX = -(by - my) / dist
+          const perpY = (bx - mx) / dist
+          const waveAmt = Math.sin(now * 2 + dna.dnaIndex) * 25 * t
 
-        ctx.beginPath()
-        ctx.moveTo(mx, my)
-        ctx.quadraticCurveTo(midX + perpX * waveAmt, midY + perpY * waveAmt, bx, by)
-
-        // 그라데이션 스트로크
-        const lineGrad = ctx.createLinearGradient(mx, my, bx, by)
-        lineGrad.addColorStop(0, `rgba(0, 255, 247, ${t * 0.12})`)
-        lineGrad.addColorStop(0.5, `rgba(123, 47, 255, ${t * 0.08})`)
-        lineGrad.addColorStop(1, `rgba(0, 255, 247, ${t * 0.04})`)
-        ctx.strokeStyle = lineGrad
-        ctx.lineWidth = 1 + t * 0.5
-        ctx.stroke()
-
-        // 에너지 파티클 — 선 위를 이동하는 밝은 점
-        const particleT = (now * (0.8 + dna.dnaIndex * 0.05)) % 1
-        const pt = particleT
-        const px = mx * (1 - pt) * (1 - pt) + 2 * (midX + perpX * waveAmt) * (1 - pt) * pt + bx * pt * pt
-        const py = my * (1 - pt) * (1 - pt) + 2 * (midY + perpY * waveAmt) * (1 - pt) * pt + by * pt * pt
-        const pAlpha = t * 0.5 * (1 - Math.abs(pt - 0.5) * 2)
-        if (pAlpha > 0.02) {
           ctx.beginPath()
-          ctx.arc(px, py, 2, 0, Math.PI * 2)
-          ctx.fillStyle = `rgba(0, 255, 247, ${pAlpha})`
-          ctx.fill()
+          ctx.moveTo(mx, my)
+          ctx.quadraticCurveTo(midX + perpX * waveAmt, midY + perpY * waveAmt, bx, by)
+
+          if (isMobile) {
+            ctx.strokeStyle = `rgba(0, 255, 247, ${t * 0.1})`
+          } else {
+            const lineGrad = ctx.createLinearGradient(mx, my, bx, by)
+            lineGrad.addColorStop(0, `rgba(0, 255, 247, ${t * 0.12})`)
+            lineGrad.addColorStop(0.5, `rgba(123, 47, 255, ${t * 0.08})`)
+            lineGrad.addColorStop(1, `rgba(0, 255, 247, ${t * 0.04})`)
+            ctx.strokeStyle = lineGrad
+          }
+          ctx.lineWidth = 1 + t * 0.5
+          ctx.stroke()
+
+          // 에너지 파티클 (데스크톱만)
+          if (!isMobile) {
+            const particleT = (now * (0.8 + dna.dnaIndex * 0.05)) % 1
+            const pt = particleT
+            const px = mx * (1 - pt) * (1 - pt) + 2 * (midX + perpX * waveAmt) * (1 - pt) * pt + bx * pt * pt
+            const py = my * (1 - pt) * (1 - pt) + 2 * (midY + perpY * waveAmt) * (1 - pt) * pt + by * pt * pt
+            const pAlpha = t * 0.5 * (1 - Math.abs(pt - 0.5) * 2)
+            if (pAlpha > 0.02) {
+              ctx.beginPath()
+              ctx.arc(px, py, 2, 0, Math.PI * 2)
+              ctx.fillStyle = `rgba(0, 255, 247, ${pAlpha})`
+              ctx.fill()
+            }
+          }
+          eDrawn++
         }
       }
     }
